@@ -48,9 +48,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SFML imgui-sfml)
 
-add_executable(DataVisualization
-    src/main.cpp
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
+
+add_executable(DataVisualization ${SRC_FILES})
+
+# just to show the source files in the CMake output for debugging purposes
+foreach(f ${SRC_FILES})
+    message(STATUS "Source: ${f}")
+endforeach()
+
+target_include_directories(DataVisualization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_compile_features(DataVisualization PRIVATE cxx_std_17)
 
