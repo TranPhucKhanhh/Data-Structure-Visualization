@@ -3,3 +3,5 @@
 struct SinglyLinkedList {
 
 };
+
+inline SinglyLinkedList singlyLinkedList;

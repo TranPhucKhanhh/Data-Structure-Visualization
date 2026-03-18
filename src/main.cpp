@@ -1,13 +1,14 @@
 #include <SFML/Graphics.hpp>
-#include <logic/heap.h>
+#include <ui/menu.h>
+#include <ui/trie.h>
+#include <ui/heap.h>
+#include <ui/shortestpath.h>
+#include <ui/singlylinkedlist.h>
+#include <ui/common.h>
 
 int main()
 {
-	heap.print();
-
-	sf::RenderWindow window( sf::VideoMode( { 200, 200 } ), "SFML works!" );
-	sf::CircleShape shape( 100.f );
-	shape.setFillColor( sf::Color::Green );
+	sf::RenderWindow window( sf::VideoMode( { 1920, 1080} ), "Data Visualization :))" );
 
 	while ( window.isOpen() )
 	{
@@ -15,10 +16,29 @@ int main()
 		{
 			if ( event->is<sf::Event::Closed>() )
 				window.close();
+
+			
 		}
 
 		window.clear();
-		window.draw( shape );
+
+		// Draw the current UI state depend on the UI view state
+		if (uiConfig.state == UIState::Menu) {
+			menu_ui.draw();
+		}
+		else if (uiConfig.state == UIState::Trie) {
+			trie_ui.draw();
+		}
+		else if (uiConfig.state == UIState::Heap) {
+			heap_ui.draw();
+		}
+		else if (uiConfig.state == UIState::ShortestPath) {
+			shortest_path_ui.draw();
+		}
+		else if (uiConfig.state == UIState::SinglyLinkedList) {
+			singly_linkes_list_ui.draw();
+		}
+
 		window.display();
 	}
 }

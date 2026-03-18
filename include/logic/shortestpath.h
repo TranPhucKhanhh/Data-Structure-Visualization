@@ -3,3 +3,5 @@
 struct ShortestPath {
 
 };
+
+inline ShortestPath shortestPath;

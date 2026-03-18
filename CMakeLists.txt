@@ -48,13 +48,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SFML imgui-sfml)
 
+# Recursively gather all .cpp files in the src directory when build
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
 add_executable(DataVisualization ${SRC_FILES})
 
-# just to show the source files in the CMake output for debugging purposes
+# Showing the source files in the CMake output for debugging purposes
 foreach(f ${SRC_FILES})
     message(STATUS "Source: ${f}")
 endforeach()
