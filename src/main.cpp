@@ -36,7 +36,7 @@ int main()
 			shortest_path_ui.draw();
 		}
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
-			singly_linkes_list_ui.draw();
+			singly_linked_list_ui.draw();
 		}
 
 		window.display();

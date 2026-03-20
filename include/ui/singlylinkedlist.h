@@ -8,4 +8,4 @@ public:
 private:
 };
 
-inline SinglyLinkedListUI singly_linkes_list_ui;	
+inline SinglyLinkedListUI singly_linked_list_ui;	
