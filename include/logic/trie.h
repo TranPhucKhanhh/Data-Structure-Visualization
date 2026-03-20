@@ -54,7 +54,7 @@ public:
     std::vector<TrieOp> insertWordStep(std::string word);
     std::vector<TrieOp> searchWordStep(std::string word);
     std::vector<TrieOp> deleteWordStep(std::string word);
-    std::vector<TrieOp> updateWordStep(std::String old_word, std::string new_word);
+    std::vector<TrieOp> updateWordStep(std::string old_word, std::string new_word);
 };
 
 inline Trie trie;
