@@ -1,4 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <imgui.h>
+#include <imgui-SFML.h>
 #include <ui/menu.h>
 #include <ui/trie.h>
 #include <ui/heap.h>
@@ -6,23 +8,9 @@
 #include <ui/singlylinkedlist.h>
 #include <ui/common.h>
 
-int main()
-{
-	sf::RenderWindow window( sf::VideoMode( { 1920, 1080} ), "Data Visualization :))" );
-
-	while ( window.isOpen() )
+namespace {
+	void drawActiveScreen()
 	{
-		while ( const std::optional event = window.pollEvent() )
-		{
-			if ( event->is<sf::Event::Closed>() )
-				window.close();
-
-			
-		}
-
-		window.clear();
-
-		// Draw the current UI state depend on the UI view state
 		if (uiConfig.state == UIState::Menu) {
 			menu_ui.draw();
 		}
@@ -38,7 +26,39 @@ int main()
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
 			singly_linked_list_ui.draw();
 		}
+	}
+}
+
+int main()
+{
+	sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Data Visualization :))");
+
+	if (!ImGui::SFML::Init(window)) {
+		return -1;
+	}
+
+	sf::Clock deltaClock;
+
+	while (window.isOpen())
+	{
+		while (const std::optional event = window.pollEvent())
+		{
+			ImGui::SFML::ProcessEvent(window, *event);
+
+			if (event->is<sf::Event::Closed>())
+				window.close();			
+			
+		}
+
+		ImGui::SFML::Update(window, deltaClock.restart());
+
+		window.clear();
+		drawActiveScreen();
+		ImGui::SFML::Render(window);
 
 		window.display();
 	}
+
+	ImGui::SFML::Shutdown(window);
+	return 0;
 }
