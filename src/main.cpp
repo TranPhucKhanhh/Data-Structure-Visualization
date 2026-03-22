@@ -37,7 +37,7 @@ namespace {
 		}
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
 			singly_linked_list_ui.draw();
-			//singly_linked_list_ui.drawSfml(window);
+			singly_linked_list_ui.drawSfml(window);
 		}
 	}
 }
