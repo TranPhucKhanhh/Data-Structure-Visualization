@@ -52,6 +52,8 @@ public:
 
     void initFromKeyboard(); // Use for debug
 
+	TrieNode* getRoot() { return root_node; }
+
     //The Do All At Once functions
     void initFromList(std::vector<std::string> &word_list);
 	void initFromFile(std::string file_path); // Implement latter
