@@ -70,3 +70,7 @@ target_link_libraries(DataVisualization
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DataVisualization)
+
+if(MSVC)
+    target_compile_options(DataVisualization PRIVATE /FS)
+endif()

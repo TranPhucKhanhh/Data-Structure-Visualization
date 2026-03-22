@@ -3,17 +3,11 @@
 #include <string>
 #include <vector>
 
-enum class PlaybackMode {
-	StepByStep,
-	RunAtOnce,
-};
-
 enum class SLLOperationType {
-	Initialize,
 	Add,
 	Delete,
 	Update,
-	Search,
+	Search
 };
 
 struct SLLFrame {
@@ -22,37 +16,39 @@ struct SLLFrame {
 	int secondaryIndex = -1;
 	int codeLine = -1;
 	std::string message;
-	SLLOperationType operationType = SLLOperationType::Initialize;
+	SLLOperationType operationType = SLLOperationType::Add;
 };
 
 struct SLLInterpolationState {
 	SLLFrame previousFrame;
 	SLLFrame currentFrame;
-	float transitionProgress = 0.0f;
 	float transitionDuration = 0.45f;
+	float transitionProgress = 0.0f;
 	bool isTransitioning = false;
 };
 
 struct SinglyLinkedList {
+	// Data
 	std::vector<int> values;
 	std::vector<SLLFrame> timeline;
 	std::size_t cursor = 0;
-	float autoplayAccumulator = 0.0f;
-	std::string lastMessage = "Ready";
-	PlaybackMode playbackMode = PlaybackMode::StepByStep;
-	float playbackSpeed = 1.0f;
+	std::string lastMessage;
 	SLLInterpolationState interpolation;
+	float autoplayAccumulator = 0.0f;
 
+	// Initialization
 	void initializeEmpty();
 	void initializeRandom(int count, int minValue, int maxValue);
 	bool initializeFromTextFile(const std::string& path);
 	bool initializeFromJsonFile(const std::string& path);
 
+	// Operations
 	bool addAt(std::size_t index, int value);
 	bool deleteAt(std::size_t index);
 	bool updateAt(std::size_t index, int value);
 	bool searchValue(int value);
 
+	// Playback
 	void stepForward();
 	void stepBackward();
 	void jumpToFinal();
@@ -60,16 +56,16 @@ struct SinglyLinkedList {
 	void updateAutoplay(float deltaSeconds, float speedMultiplier, bool enabled);
 	void updateInterpolation(float deltaSeconds);
 
+	// Frame access
 	const SLLFrame& currentFrame() const;
 	const SLLFrame& getInterpolatedFrame() const;
 	bool hasTimeline() const;
 
-private:
-	void rebuildIdleTimeline(const std::string& message, int codeLine = -1);
-	void pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType = SLLOperationType::Initialize);
+	// Internal
+	void rebuildIdleTimeline(const std::string& message, int codeLine = 1);
+	void pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType = SLLOperationType::Add);
 	void commitTimeline(const std::string& fallbackMessage);
-	static std::vector<int> parseIntegers(const std::string& content);
-
+	std::vector<int> parseIntegers(const std::string& content);
 };
 
 inline SinglyLinkedList singlyLinkedList;

@@ -4,6 +4,11 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <logic/singlylinkedlist.h>
 
+enum class PlaybackMode {
+	StepByStep,
+	RunAtOnce
+};
+
 class SinglyLinkedListUI {
 public:
 	SinglyLinkedListUI();

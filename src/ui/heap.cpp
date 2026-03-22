@@ -1,8 +1,6 @@
 #include <ui/heap.h>
 #include <ui/common.h>
 
-#include <imgui.h>
-
 HeapUI::HeapUI() {
 	// This is where you can initialize any resources or variables needed
 }

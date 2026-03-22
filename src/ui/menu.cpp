@@ -1,8 +1,6 @@
 #include <ui/menu.h>
 #include <ui/common.h>
 
-#include <imgui.h>
-
 MenuUI::MenuUI() {
 	// This is where you can initialize any resources or variables needed
 }

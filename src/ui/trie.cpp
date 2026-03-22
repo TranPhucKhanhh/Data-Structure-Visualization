@@ -1,8 +1,6 @@
 #include <ui/trie.h>
 #include <ui/common.h>
 
-#include <imgui.h>
-
 TrieUI::TrieUI() {
 	// This is where you can initialize any resources or variables needed
 }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <imgui.h>
+#include <ui/common.h>
+
 class TrieUI {
 public:
 	TrieUI();

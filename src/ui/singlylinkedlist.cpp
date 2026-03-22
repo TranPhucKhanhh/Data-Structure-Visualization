@@ -159,10 +159,7 @@ namespace {
 }
 
 SinglyLinkedListUI::SinglyLinkedListUI() {
-	// Initialize playback mode and speed locally
-	playbackMode_ = PlaybackMode::StepByStep;
-	playbackSpeed_ = 1.0f;
-	scrollOffset_ = 0.0f;
+	// This is where you can initialize any resources or variables needed
 }
 
 void SinglyLinkedListUI::draw() {

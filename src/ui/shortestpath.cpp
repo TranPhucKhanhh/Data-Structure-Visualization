@@ -1,8 +1,6 @@
 #include <ui/shortestpath.h>
 #include <ui/common.h>
 
-#include <imgui.h>
-
 ShortestPathUI::ShortestPathUI() {
 	// This is where you can initialize any resources or variables needed
 }
