@@ -53,21 +53,20 @@ public:
     void initFromKeyboard(); // Use for debug
 
     //The Do All At Once functions
-    void initFromList(std::vector<std::string> word_list);
+    void initFromList(std::vector<std::string> &word_list);
 	void initFromFile(std::string file_path); // Implement latter
-    void insertWord(std::string word);
-    bool searchWord(std::string word);
-    void deleteWord(std::string word);
-    void updateWord(std::string old_word, std::string new_word);
-	void clearTrie();
+    void insertWord(const std::string& word);
+    bool searchWord(const std::string& word);
+    void deleteWord(const std::string& word);
+    void updateWord(const std::string& old_word, const std::string& new_word);
 
     //The Step by Step functions
-    std::vector<TrieInstruction> initFromListStep(std::vector<std::string> word_list);
+    std::vector<TrieInstruction> initFromListStep(std::vector<std::string> &word_list);
     std::vector<TrieInstruction> initFromFileStep(std::string file_path); // Implement latter
-    std::vector<TrieInstruction> insertWordStep(std::string word);
-    std::vector<TrieInstruction> searchWordStep(std::string word);
-    std::vector<TrieInstruction> deleteWordStep(std::string word);
-    std::vector<TrieInstruction> updateWordStep(std::string old_word, std::string new_word);
+    std::vector<TrieInstruction> insertWordStep(const std::string& word);
+    std::vector<TrieInstruction> searchWordStep(const std::string& word);
+    std::vector<TrieInstruction> deleteWordStep(const std::string& word);
+    std::vector<TrieInstruction> updateWordStep(const std::string& old_word, const std::string& new_word);
 };
 
 inline Trie trie;
