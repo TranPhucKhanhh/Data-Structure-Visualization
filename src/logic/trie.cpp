@@ -274,3 +274,5 @@ std::vector<TrieOp> Trie::updateWordStep(std::string old_word, std::string new_w
 
     return _all_steps;
 }
+
+TrieNode* Trie::getRoot() { return root_node; }

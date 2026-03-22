@@ -43,6 +43,7 @@ public:
     Trie();
     ~Trie();
 
+    TrieNode* getRoot();
     void initFromKeyboard();
 
     //The Do All At Once functions
