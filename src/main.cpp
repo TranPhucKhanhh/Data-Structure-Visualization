@@ -9,7 +9,7 @@
 #include <ui/common.h>
 
 namespace {
-	void drawActiveScreen()
+	void drawActiveScreen(sf::RenderWindow& window)
 	{
 		if (uiConfig.state == UIState::Menu) {
 			menu_ui.draw();
@@ -25,6 +25,7 @@ namespace {
 		}
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
 			singly_linked_list_ui.draw();
+			singly_linked_list_ui.drawSfml(window);
 		}
 	}
 }
@@ -53,7 +54,7 @@ int main()
 		ImGui::SFML::Update(window, deltaClock.restart());
 
 		window.clear();
-		drawActiveScreen();
+		drawActiveScreen(window);
 		ImGui::SFML::Render(window);
 
 		window.display();

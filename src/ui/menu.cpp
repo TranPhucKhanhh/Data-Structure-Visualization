@@ -32,11 +32,6 @@ void MenuUI::draw() {
 		uiConfig.state = UIState::ShortestPath;
 	}
 
-	ImGui::SeparatorText("Global Style");
-	ImGui::SliderFloat("Node radius", &uiConfig.style.nodeRadius, 12.0f, 60.0f, "%.1f");
-	ImGui::SliderFloat("Edge thickness", &uiConfig.style.edgeThickness, 1.0f, 8.0f, "%.1f");
-	ImGui::SliderFloat("Font scale", &uiConfig.style.fontScale, 0.75f, 2.0f, "%.2f");
-
-	ImGui::TextWrapped("Choose a module to begin. Each module has its own playback controls, speed settings, and visualization options.");
+	ImGui::TextWrapped("Choose a module to begin.");
 	ImGui::End();
 }

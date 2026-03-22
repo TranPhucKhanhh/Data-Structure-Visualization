@@ -1,12 +1,14 @@
 #pragma once
 
 #include <array>
+#include <SFML/Graphics/RenderWindow.hpp>
 #include <logic/singlylinkedlist.h>
 
 class SinglyLinkedListUI {
 public:
 	SinglyLinkedListUI();
 
+	void drawSfml(sf::RenderWindow& window);
 	void draw();
 private:
 	std::array<char, 256> txtPath_{};
@@ -25,6 +27,10 @@ private:
 	PlaybackMode playbackMode_ = PlaybackMode::StepByStep;
 	float playbackSpeed_ = 1.0f;
 	float scrollOffset_ = 0.0f;
+	float nodeRadius_ = 28.0f;
+	float edgeThickness_ = 3.0f;
+	float fontScale_ = 1.0f;
+	bool showCodeOverlay_ = true;
 };
 
 inline SinglyLinkedListUI singly_linked_list_ui;	

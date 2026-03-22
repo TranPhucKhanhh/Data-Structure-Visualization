@@ -18,8 +18,10 @@ void HeapUI::draw() {
 
 	ImGui::TextUnformatted("Heap module foundation is ready.");
 	ImGui::Separator();
-	ImGui::Text("Node radius: %.1f", uiConfig.style.nodeRadius);
-	ImGui::Text("Edge thickness: %.1f", uiConfig.style.edgeThickness);
+	ImGui::SeparatorText("Style");
+	ImGui::SliderFloat("Node radius##heap", &nodeRadius_, 12.0f, 60.0f, "%.1f");
+	ImGui::SliderFloat("Edge thickness##heap", &edgeThickness_, 1.0f, 8.0f, "%.1f");
+	ImGui::SliderFloat("Font scale##heap", &fontScale_, 0.75f, 2.0f, "%.2f");
 
 	ImGui::Spacing();
 	ImGui::TextWrapped("Next implementation step: hook initialize/add/delete/update/search actions and render heap array/tree views.");

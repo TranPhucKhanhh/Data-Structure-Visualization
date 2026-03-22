@@ -9,6 +9,28 @@
 
 namespace {
 	constexpr float kBaseStepIntervalSeconds = 0.55f;
+
+	float pickTransitionDuration(const SLLFrame& from, const SLLFrame& to)
+	{
+		if (from.operationType == SLLOperationType::Add && to.operationType == SLLOperationType::Add) {
+			if (from.codeLine == 2 && to.codeLine == 3) {
+				return 0.90f; // Create new node above list
+			}
+			if (from.codeLine == 3 && to.codeLine == 4) {
+				return 1.05f; // Open gap and connect prev -> new
+			}
+			if (from.codeLine == 4 && to.codeLine == 5) {
+				return 0.95f; // Connect new -> next and settle
+			}
+		}
+
+		if (from.operationType == SLLOperationType::Delete && to.operationType == SLLOperationType::Delete &&
+			from.codeLine == 4 && to.codeLine == 5) {
+			return 0.95f;
+		}
+
+		return 0.45f;
+	}
 }
 
 void SinglyLinkedList::initializeEmpty()
@@ -101,7 +123,7 @@ bool SinglyLinkedList::addAt(std::size_t index, int value)
 	values.insert(values.begin() + static_cast<std::ptrdiff_t>(index), value);
 
 	if (index == 0) {
-		pushFrame(0, beforeInsert.empty() ? -1 : 1, 4,
+		pushFrame(0, 0, 4,
 			"Set head to new node", SLLOperationType::Add);
 	}
 	else {
@@ -206,6 +228,7 @@ void SinglyLinkedList::stepForward()
 		interpolation.previousFrame = currentFrame();
 		++cursor;
 		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
 		interpolation.transitionProgress = 0.0f;
 		interpolation.isTransitioning = true;
 	}
@@ -220,6 +243,7 @@ void SinglyLinkedList::stepBackward()
 		interpolation.previousFrame = currentFrame();
 		--cursor;
 		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
 		interpolation.transitionProgress = 0.0f;
 		interpolation.isTransitioning = true;
 	}
@@ -246,6 +270,9 @@ void SinglyLinkedList::updateAutoplay(float deltaSeconds, float speedMultiplier,
 {
 	if (!enabled || timeline.empty() || cursor + 1 >= timeline.size()) {
 		autoplayAccumulator = 0.0f;
+		return;
+	}
+	if (interpolation.isTransitioning) {
 		return;
 	}
 
