@@ -307,5 +307,3 @@ std::vector<TrieInstruction> Trie::updateWordStep(const std::string& old_word, c
 
     return _all_steps;
 }
-
-TrieNode* Trie::getRoot() { return root_node; }

@@ -32,7 +32,7 @@ private:
     float playbackSpeed_ = 1.0f;
     
     // Lưu trữ các bước mô phỏng (dựa trên TrieOp của bạn)
-    std::vector<TrieOp> currentSteps_;
+    std::vector<TrieInstruction> currentSteps_;
     int currentStepIndex_ = 0;
     
     // Kết quả của hoạt động

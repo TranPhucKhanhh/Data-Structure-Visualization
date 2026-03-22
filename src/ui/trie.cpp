@@ -5,7 +5,6 @@
 #include <cmath>
 
 namespace {
-    // Tạm thời mượn lại hàm lấy font (giống bên SLL)
     const sf::Font* getTrieFont() {
         static sf::Font font;
         static bool attempted = false;
@@ -63,7 +62,7 @@ void TrieUI::draw() {
             currentSteps_ = trie.searchWordStep(word);
             currentStepIndex_ = 0;
             // Kiểm tra kết quả cuối cùng của search
-            if (!currentSteps_.empty() && currentSteps_.back() == TrieOp::FOUND_WORD) {
+            if (!currentSteps_.empty() && currentSteps_.back().trie_op == TrieOp::FOUND_WORD) {
                 operationResult_ = "Found!";
             } else {
                 operationResult_ = "Not Found!";
@@ -125,16 +124,14 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
     background.setFillColor(sf::Color(16, 21, 30));
     window.draw(background);
 
-    // BẮT BUỘC: Bạn cần thêm hàm getRoot() vào logic/trie.h để lấy root_node
     TrieNode* root = trie.getRoot();
     if (!root) return;
 
-    // Giả sử có root, ta sẽ bắt đầu vẽ từ giữa màn hình trên cùng
     float startX = size.x / 2.0f;
     float startY = 80.0f;
     float initialGap = size.x / 3.0f; // Khoảng cách lan tỏa ban đầu
 
-    // Gọi hàm đệ quy để vẽ (Đã comment lại chờ bạn update hàm getRoot)
+    // Gọi hàm đệ quy để vẽ 
     drawTrieNode(window, root, startX, startY, initialGap, font);
 }
 
