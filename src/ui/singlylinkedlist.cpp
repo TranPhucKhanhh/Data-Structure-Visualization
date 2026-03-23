@@ -93,6 +93,10 @@ namespace {
 		int lineCount = 0;
 		pickCodeBlock(opType, codeArray, lineCount);
 		switch (opType) {
+		case SLLOperationType::Initialize:
+			ImGui::TextUnformatted("Operation: Initialize");
+			ImGui::End();
+			return;
 		case SLLOperationType::Add:
 			ImGui::TextUnformatted("Operation: Add");
 			break;
@@ -196,11 +200,6 @@ void SinglyLinkedListUI::draw() {
 	if (ImGui::Button("Load txt")) {
 		singlyLinkedList.initializeFromTextFile(txtPath_.data());
 	}
-	ImGui::InputText("JSON file path##sll", jsonPath_.data(), jsonPath_.size());
-	ImGui::SameLine();
-	if (ImGui::Button("Load json")) {
-		singlyLinkedList.initializeFromJsonFile(jsonPath_.data());
-	}
 
 	ImGui::SeparatorText("Operations");
 	ImGui::PushItemWidth(90.0f);
@@ -209,13 +208,13 @@ void SinglyLinkedListUI::draw() {
 	ImGui::InputInt("Add value##add", &addValue_);
 	ImGui::SameLine();
 	if (ImGui::Button("Add")) {
-		singlyLinkedList.addAt(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
+		singlyLinkedList.addAtViz(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
 	}
 
 	ImGui::InputInt("Delete index##del", &deleteIndex_);
 	ImGui::SameLine();
 	if (ImGui::Button("Delete")) {
-		singlyLinkedList.deleteAt(static_cast<std::size_t>(std::max(0, deleteIndex_)));
+		singlyLinkedList.deleteAtViz(static_cast<std::size_t>(std::max(0, deleteIndex_)));
 	}
 
 	ImGui::InputInt("Update index##upd", &updateIndex_);
@@ -223,13 +222,13 @@ void SinglyLinkedListUI::draw() {
 	ImGui::InputInt("Update value##upd", &updateValue_);
 	ImGui::SameLine();
 	if (ImGui::Button("Update")) {
-		singlyLinkedList.updateAt(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
+		singlyLinkedList.updateAtViz(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
 	}
 
 	ImGui::InputInt("Search value##search", &searchValue_);
 	ImGui::SameLine();
 	if (ImGui::Button("Search")) {
-		singlyLinkedList.searchValue(searchValue_);
+		singlyLinkedList.searchValueViz(searchValue_);
 	}
 	ImGui::PopItemWidth();
 
@@ -334,17 +333,39 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 	const float maxScroll = computeMaxScroll(frame, viewportWidth, nodeRadius_);
 
 	const float minScroll = 0.0f;
+	const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+	const bool mouseInsideCanvas =
+		mousePos.x >= 0 && mousePos.y >= 0 &&
+		mousePos.x < static_cast<int>(size.x) &&
+		mousePos.y < static_cast<int>(size.y);
+	constexpr int kLeftPanelBoundaryX = 500;
+	const bool mouseOnVisualizationArea = mousePos.x >= kLeftPanelBoundaryX;
+	const bool canDragCanvas = mouseInsideCanvas && mouseOnVisualizationArea;
+	const bool isDragPressed =
+		sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) ||
+		sf::Mouse::isButtonPressed(sf::Mouse::Button::Middle);
+
+	if (canDragCanvas && isDragPressed) {
+		if (!isCanvasDragging_) {
+			isCanvasDragging_ = true;
+			lastDragMousePos_ = mousePos;
+		}
+		else {
+			const int deltaX = mousePos.x - lastDragMousePos_.x;
+			scrollOffset_ -= static_cast<float>(deltaX);
+			lastDragMousePos_ = mousePos;
+		}
+	}
+	else {
+		isCanvasDragging_ = false;
+	}
+
 	const int activeIdx = frame.activeIndex;
-	if (interpolation.isTransitioning && interpolation.previousFrame.activeIndex >= 0 && activeIdx >= 0) {
+	if (!isCanvasDragging_ && interpolation.isTransitioning && interpolation.previousFrame.activeIndex >= 0 && activeIdx >= 0) {
 		const float prevX = 30.0f + static_cast<float>(interpolation.previousFrame.activeIndex) * spacing;
 		const float currX = 30.0f + static_cast<float>(activeIdx) * spacing;
 		const float smoothX = lerp(prevX, currX, interpolation.transitionProgress);
 		const float target = std::clamp(smoothX - viewportWidth * 0.5f, minScroll, maxScroll);
-		scrollOffset_ += (target - scrollOffset_) * 0.15f;
-	}
-	else if (activeIdx >= 0) {
-		const float nodeX = 30.0f + static_cast<float>(activeIdx) * spacing;
-		const float target = std::clamp(nodeX - viewportWidth * 0.5f, minScroll, maxScroll);
 		scrollOffset_ += (target - scrollOffset_) * 0.15f;
 	}
 
@@ -437,7 +458,55 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		frame.operationType == SLLOperationType::Delete &&
 		interpolation.previousFrame.codeLine == 4 && frame.codeLine == 5;
 
-	if (addCreateTransition || addCreateStatic) {
+	const bool initializeTransition = interpolation.isTransitioning &&
+		interpolation.previousFrame.operationType == SLLOperationType::Initialize &&
+		frame.operationType == SLLOperationType::Initialize;
+
+	const bool initializeStatic = !interpolation.isTransitioning &&
+		frame.operationType == SLLOperationType::Initialize;
+
+	if (initializeTransition || initializeStatic) {
+		const float t = initializeTransition ? interpolation.transitionProgress : 1.0f;
+		const float smoothT = t * t * (3.0f - 2.0f * t);
+		const std::size_t nodeCount = frame.values.size();
+		const float revealSpan = 0.70f;
+		const float fadeWindow = 0.30f;
+		auto staggerDelay = [&](std::size_t idx) {
+			if (nodeCount <= 1) {
+				return 0.0f;
+			}
+			return revealSpan * (static_cast<float>(idx) / static_cast<float>(nodeCount - 1));
+		};
+
+		for (std::size_t i = 0; i < frame.values.size(); ++i) {
+			const float cx = startX + static_cast<float>(i) * spacing;
+			if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
+				continue;
+			}
+
+			const float nodeDelay = staggerDelay(i);
+			const float appear = std::clamp((smoothT - nodeDelay) / fadeWindow, 0.0f, 1.0f);
+			const float riseOffset = (1.0f - appear) * 26.0f;
+			const std::uint8_t alpha = static_cast<std::uint8_t>(255.0f * appear);
+			drawNode(cx, centerY + riseOffset, frame.values[i], static_cast<int>(i), sf::Color(72, 149, 239), alpha);
+		}
+
+		for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
+			const float x0 = startX + static_cast<float>(i) * spacing;
+			const float x1 = startX + static_cast<float>(i + 1) * spacing;
+			const float nodeDelay0 = staggerDelay(i);
+			const float nodeDelay1 = staggerDelay(i + 1);
+			const float appear0 = std::clamp((smoothT - nodeDelay0) / fadeWindow, 0.0f, 1.0f);
+			const float appear1 = std::clamp((smoothT - nodeDelay1) / fadeWindow, 0.0f, 1.0f);
+			const float edgeAppear = std::min(appear0, appear1);
+			if (edgeAppear <= 0.05f) {
+				continue;
+			}
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY,
+				sf::Color(148, 163, 184, static_cast<std::uint8_t>(255.0f * edgeAppear)));
+		}
+	}
+	else if (addCreateTransition || addCreateStatic) {
 		const int rawInsertSlot =
 			frame.secondaryIndex >= 0 ? frame.secondaryIndex :
 			(frame.activeIndex >= 0 ? frame.activeIndex + 1 : static_cast<int>(frame.values.size()));
@@ -762,4 +831,290 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		ring.setOutlineColor(sf::Color(255, 214, 102, 230));
 		window.draw(ring);
 	}
+}
+
+///-----------------------------------
+/// TIMELINE MANAGEMENT (Moved from logic)
+///-----------------------------------
+
+namespace {
+	constexpr float kBaseStepIntervalSeconds = 0.55f;
+
+	float pickTransitionDuration(const SLLFrame& from, const SLLFrame& to)
+	{
+		if (from.operationType == SLLOperationType::Add && to.operationType == SLLOperationType::Add) {
+			if (from.codeLine == 2 && to.codeLine == 3) {
+				return 0.90f; // Create new node above list
+			}
+			if (from.codeLine == 3 && to.codeLine == 4) {
+				return 1.05f; // Open gap and connect prev -> new
+			}
+			if (from.codeLine == 4 && to.codeLine == 5) {
+				return 0.95f; // Connect new -> next and settle
+			}
+		}
+
+		if (from.operationType == SLLOperationType::Initialize && to.operationType == SLLOperationType::Initialize) {
+			return 1.0f;
+		}
+
+		if (from.operationType == SLLOperationType::Delete && to.operationType == SLLOperationType::Delete &&
+			from.codeLine == 4 && to.codeLine == 5) {
+			return 0.95f;
+		}
+
+		return 0.45f;
+	}
+}
+
+void SinglyLinkedList::stepForward()
+{
+	if (timeline.empty()) {
+		return;
+	}
+	if (cursor + 1 < timeline.size()) {
+		interpolation.previousFrame = currentFrame();
+		++cursor;
+		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
+		interpolation.transitionProgress = 0.0f;
+		interpolation.isTransitioning = true;
+	}
+}
+
+void SinglyLinkedList::stepBackward()
+{
+	if (timeline.empty()) {
+		return;
+	}
+	if (cursor > 0) {
+		interpolation.previousFrame = currentFrame();
+		--cursor;
+		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
+		interpolation.transitionProgress = 0.0f;
+		interpolation.isTransitioning = true;
+	}
+}
+
+void SinglyLinkedList::jumpToFinal()
+{
+	if (!timeline.empty()) {
+		cursor = timeline.size() - 1;
+		interpolation.isTransitioning = false;
+		interpolation.transitionProgress = 0.0f;
+	}
+}
+
+void SinglyLinkedList::jumpToStart()
+{
+	cursor = 0;
+	autoplayAccumulator = 0.0f;
+	interpolation.isTransitioning = false;
+	interpolation.transitionProgress = 0.0f;
+}
+
+void SinglyLinkedList::updateAutoplay(float deltaSeconds, float speedMultiplier, bool enabled)
+{
+	if (!enabled || timeline.empty() || cursor + 1 >= timeline.size()) {
+		autoplayAccumulator = 0.0f;
+		return;
+	}
+	if (interpolation.isTransitioning) {
+		return;
+	}
+
+	const float safeSpeed = std::max(0.1f, speedMultiplier);
+	const float stepInterval = kBaseStepIntervalSeconds / safeSpeed;
+	autoplayAccumulator += deltaSeconds;
+
+	if (autoplayAccumulator >= stepInterval && cursor + 1 < timeline.size()) {
+		autoplayAccumulator -= stepInterval;
+		stepForward();
+	}
+}
+
+const SLLFrame& SinglyLinkedList::currentFrame() const
+{
+	static const SLLFrame kEmptyFrame{};
+	if (timeline.empty()) {
+		return kEmptyFrame;
+	}
+	if (cursor >= timeline.size()) {
+		return timeline.back();
+	}
+	return timeline[cursor];
+}
+
+void SinglyLinkedList::updateInterpolation(float deltaSeconds)
+{
+	if (!interpolation.isTransitioning) {
+		return;
+	}
+
+	interpolation.transitionProgress += deltaSeconds / interpolation.transitionDuration;
+	if (interpolation.transitionProgress >= 1.0f) {
+		interpolation.transitionProgress = 1.0f;
+		interpolation.isTransitioning = false;
+	}
+}
+
+const SLLFrame& SinglyLinkedList::getInterpolatedFrame() const
+{
+	if (!interpolation.isTransitioning) {
+		return currentFrame();
+	}
+	return interpolation.currentFrame;
+}
+
+bool SinglyLinkedList::hasTimeline() const
+{
+	return !timeline.empty();
+}
+
+void SinglyLinkedList::rebuildIdleTimeline(const std::string& message, int codeLine)
+{
+	timeline.clear();
+	pushFrame(-1, -1, codeLine, message);
+	commitTimeline(message);
+}
+
+void SinglyLinkedList::pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType)
+{
+	SLLFrame frame;
+	frame.values = values;
+	frame.activeIndex = activeIndex;
+	frame.secondaryIndex = secondaryIndex;
+	frame.codeLine = codeLine;
+	frame.message = message;
+	frame.operationType = opType;
+	timeline.push_back(std::move(frame));
+}
+
+void SinglyLinkedList::commitTimeline(const std::string& fallbackMessage)
+{
+	if (timeline.empty()) {
+		pushFrame(-1, -1, -1, fallbackMessage);
+	}
+	cursor = 0;
+	autoplayAccumulator = 0.0f;
+	lastMessage = timeline.back().message.empty() ? fallbackMessage : timeline.back().message;
+}
+
+///-----------------------------------
+/// VISUALIZATION WRAPPERS
+/// These build timestep-by-step animations before executing operations
+///-----------------------------------
+
+void SinglyLinkedList::addAtViz(std::size_t index, int value)
+{
+	if (index > values.size()) {
+		lastMessage = "Add failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start add operation", SLLOperationType::Add);
+
+	for (std::size_t i = 0; i < index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to insertion position", SLLOperationType::Add);
+	}
+	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
+		"Create new node with value", SLLOperationType::Add);
+
+	addAt(index, value);
+
+	if (index == 0) {
+		pushFrame(0, 0, 4,
+			"Set head to new node", SLLOperationType::Add);
+	}
+	else {
+		pushFrame(static_cast<int>(index - 1), static_cast<int>(index), 4,
+			"Set prev->next to new node", SLLOperationType::Add);
+	}
+
+	pushFrame(static_cast<int>(index),
+		(index + 1 < values.size()) ? static_cast<int>(index + 1) : -1,
+		5,
+		"Set new node next pointer", SLLOperationType::Add);
+	commitTimeline("Add complete");
+}
+
+void SinglyLinkedList::deleteAtViz(std::size_t index)
+{
+	if (values.empty()) {
+		lastMessage = "Delete failed: list is empty";
+		rebuildIdleTimeline(lastMessage, 1);
+		return;
+	}
+	if (index >= values.size()) {
+		lastMessage = "Delete failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start delete operation", SLLOperationType::Delete);
+
+	for (std::size_t i = 0; i <= index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Delete);
+	}
+	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
+		"Target node selected", SLLOperationType::Delete);
+
+	int nextIndexBeforeErase = (index + 1 < values.size()) ? static_cast<int>(index + 1) : -1;
+	pushFrame(static_cast<int>(index), nextIndexBeforeErase, 4,
+		"Remove target node", SLLOperationType::Delete);
+
+	deleteAt(index);
+	
+	int prevIndexAfterErase = (index == 0) ? -1 : static_cast<int>(index - 1);
+	int nextIndexAfterErase = (index < values.size()) ? static_cast<int>(index) : -1;
+	if (index == 0) {
+		pushFrame(nextIndexAfterErase, -1, 5, "Move head to next node", SLLOperationType::Delete);
+	}
+	else {
+		pushFrame(prevIndexAfterErase, nextIndexAfterErase, 5,
+			"Set prev->next to node after deleted", SLLOperationType::Delete);
+	}
+	commitTimeline("Delete complete");
+}
+
+void SinglyLinkedList::updateAtViz(std::size_t index, int value)
+{
+	if (index >= values.size()) {
+		lastMessage = "Update failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start update operation", SLLOperationType::Update);
+
+	for (std::size_t i = 0; i <= index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Update);
+	}
+
+	updateAt(index, value);
+	pushFrame(static_cast<int>(index), -1, 3, "Updated node value", SLLOperationType::Update);
+	commitTimeline("Update complete");
+}
+
+void SinglyLinkedList::searchValueViz(int value)
+{
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start search operation", SLLOperationType::Search);
+
+	for (std::size_t i = 0; i < values.size(); ++i) {
+		if (values[i] == value) {
+			pushFrame(static_cast<int>(i), -1, 3, "Value found", SLLOperationType::Search);
+			commitTimeline("Search complete: found");
+			return;
+		}
+		pushFrame(static_cast<int>(i), -1, 2, "Compare current node", SLLOperationType::Search);
+	}
+
+	pushFrame(-1, -1, 4, "Value not found", SLLOperationType::Search);
+	commitTimeline("Search complete: not found");
 }
