@@ -23,6 +23,7 @@ namespace {
 		Update
 	};
 
+	//Linear interpolation helper for smooth animated transitions.
 	float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
 	}
@@ -88,6 +89,7 @@ namespace {
 		"3      current.data = newValue"
 	};
 
+	//Resolve add pseudocode variant (first/end/middle) from current frame context.
 	SLLCodeVariant detectAddVariant(const SLLFrame* frame, int activeLine)
 	{
 		if (frame == nullptr) {
@@ -121,6 +123,7 @@ namespace {
 		}
 	}
 
+	//Resolve delete pseudocode variant (first/end/middle) from current frame context.
 	SLLCodeVariant detectDeleteVariant(const SLLFrame* frame, int activeLine)
 	{
 		if (frame == nullptr) {
@@ -144,6 +147,7 @@ namespace {
 		return SLLCodeVariant::None;
 	}
 
+	//Convert timeline code line to displayed pseudocode line for the active variant.
 	int mapTimelineLineToPseudoLine(SLLCodeVariant variant, int timelineLine)
 	{
 		switch (variant) {
@@ -168,6 +172,7 @@ namespace {
 		}
 	}
 
+	//Select pseudocode block and line count for the current operation/frame.
 	void pickCodeBlock(SLLOperationType opType, int activeLine, const SLLFrame* frame, const char**& codeArray, int& lineCount, SLLCodeVariant* variantOut = nullptr)
 	{
 		static SLLCodeVariant lastAddVariant = SLLCodeVariant::InsertMiddle;
@@ -250,6 +255,7 @@ namespace {
 		}
 	}
 
+	//Optional floating code overlay used for quick operation-line inspection.
 	void drawCodeOverlay(int activeLine, SLLOperationType opType)
 	{
 		const ImVec2 viewportPos = ImGui::GetMainViewport()->Pos;
@@ -306,6 +312,7 @@ namespace {
 		ImGui::End();
 	}
 
+	//Compute max horizontal pan based on current frame width and viewport size.
 	float computeMaxScroll(const SLLFrame& frame, float viewportWidth, float nodeRadius)
 	{
 		const float radius = std::clamp(nodeRadius, 18.0f, 42.0f);
@@ -315,6 +322,7 @@ namespace {
 		return std::max(0.0f, totalWidth - viewportWidth);
 	}
 
+	//Load and cache a font for SFML node/value rendering.
 	const sf::Font* getSllFont()
 	{
 		static sf::Font font;
@@ -341,10 +349,12 @@ namespace {
 	}
 }
 
+//Construct UI state for the Singly Linked List screen.
 SinglyLinkedListUI::SinglyLinkedListUI() {
 	// This is where you can initialize any resources or variables needed
 }
 
+//Render all ImGui controls and panels for the Singly Linked List visualizer.
 void SinglyLinkedListUI::draw() {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	const ImVec2 vpPos = viewport->Pos;
@@ -364,6 +374,7 @@ void SinglyLinkedListUI::draw() {
 	commentPanelOpenT_ = std::clamp(commentPanelOpenT_, 0.0f, 1.0f);
 	codePanelOpenT_ = std::clamp(codePanelOpenT_, 0.0f, 1.0f);
 
+	const bool hasTimelineFrames = singlyLinkedList.hasTimeline();
 	const SLLFrame displayFrame = singlyLinkedList.getInterpolatedFrame();
 	int displayedCodeLine = displayFrame.codeLine;
 	SLLOperationType displayedOpType = displayFrame.operationType;
@@ -380,35 +391,48 @@ void SinglyLinkedListUI::draw() {
 	}
 
 	ImGui::SetNextWindowPos(vpPos);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f));
-	ImGui::SetNextWindowBgAlpha(0.95f);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
 	if (ImGui::Begin("##SLLTopBar", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoSavedSettings)) {
-		if (ImGui::Button("DATA STRUCTURES", ImVec2(150.0f, 0.0f))) {
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoScrollbar)) {
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.00f, 0.00f, 0.00f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.24f, 0.33f, 0.65f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
+
+		if (ImGui::Button("MAIN MENU", ImVec2(112.0f, 26.0f))) {
 			uiConfig.state = UIState::Menu;
 		}
-		ImGui::SameLine(180.0f);
 
-		if (ImGui::Button("Singly Linked List")) {
-			uiConfig.state = UIState::SinglyLinkedList;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Trie")) {
-			uiConfig.state = UIState::Trie;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Heap")) {
-			uiConfig.state = UIState::Heap;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Shortest Path")) {
-			uiConfig.state = UIState::ShortestPath;
-		}
+		auto navButton = [&](const char* label, UIState target, bool active) {
+			ImGui::SameLine();
+			if (active) {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+			}
+			if (ImGui::Button(label, ImVec2(132.0f, 26.0f))) {
+				uiConfig.state = target;
+			}
+			if (active) {
+				ImGui::PopStyleColor(2);
+			}
+		};
+
+		navButton("LINKED LIST", UIState::SinglyLinkedList, uiConfig.state == UIState::SinglyLinkedList);
+		navButton("TRIE", UIState::Trie, uiConfig.state == UIState::Trie);
+		navButton("HEAP", UIState::Heap, uiConfig.state == UIState::Heap);
+		navButton("SHORTEST PATH", UIState::ShortestPath, uiConfig.state == UIState::ShortestPath);
+
+		ImGui::PopStyleColor(4);
 	}
 	ImGui::End();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
 
 	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
 	ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
@@ -706,18 +730,13 @@ void SinglyLinkedListUI::draw() {
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoScrollbar)) {
-			if (codePanelOpenT_ > 0.55f) {
+			if (codePanelOpenT_ > 0.55f && hasTimelineFrames) {
 				const char** codeArray = nullptr;
 				int lineCount = 0;
 				SLLCodeVariant codeVariant = SLLCodeVariant::None;
 				pickCodeBlock(displayedOpType, displayedCodeLine, &displayFrame, codeArray, lineCount, &codeVariant);
 				const int highlightedLine = mapTimelineLineToPseudoLine(codeVariant, displayedCodeLine);
-				if (codeArray == nullptr || lineCount == 0) {
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.19f, 0.13f, 0.06f, 1.0f));
-					ImGui::TextUnformatted("Initialization has no pseudocode block.");
-					ImGui::PopStyleColor();
-				}
-				else {
+				if (codeArray != nullptr && lineCount > 0) {
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
 					for (int i = 0; i < lineCount; ++i) {
 						if ((i + 1) == highlightedLine) {
@@ -824,6 +843,7 @@ void SinglyLinkedListUI::draw() {
 	}
 }
 
+//Render SFML canvas content (nodes, edges, animations, panning, zoom).
 void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 {
 	const SLLFrame frame = singlyLinkedList.getInterpolatedFrame();
@@ -1368,6 +1388,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 namespace {
 	constexpr float kBaseStepIntervalSeconds = 0.55f;
 
+	//Choose transition duration between two frames for smoother visual pacing.
 	float pickTransitionDuration(const SLLFrame& from, const SLLFrame& to)
 	{
 		if (from.operationType == SLLOperationType::Add && to.operationType == SLLOperationType::Add) {
@@ -1395,6 +1416,7 @@ namespace {
 	}
 }
 
+//Move timeline cursor forward by one step and start interpolation.
 void SinglyLinkedList::stepForward()
 {
 	if (timeline.empty()) {
@@ -1410,6 +1432,7 @@ void SinglyLinkedList::stepForward()
 	}
 }
 
+//Move timeline cursor backward by one step and start interpolation.
 void SinglyLinkedList::stepBackward()
 {
 	if (timeline.empty()) {
@@ -1425,6 +1448,7 @@ void SinglyLinkedList::stepBackward()
 	}
 }
 
+//Jump directly to the final timeline frame.
 void SinglyLinkedList::jumpToFinal()
 {
 	if (!timeline.empty()) {
@@ -1434,6 +1458,7 @@ void SinglyLinkedList::jumpToFinal()
 	}
 }
 
+//Jump directly to the first timeline frame and reset playback state.
 void SinglyLinkedList::jumpToStart()
 {
 	cursor = 0;
@@ -1442,6 +1467,7 @@ void SinglyLinkedList::jumpToStart()
 	interpolation.transitionProgress = 0.0f;
 }
 
+//Advance timeline automatically based on elapsed time and playback speed.
 void SinglyLinkedList::updateAutoplay(float deltaSeconds, float speedMultiplier, bool enabled)
 {
 	if (!enabled || timeline.empty() || cursor + 1 >= timeline.size()) {
@@ -1462,6 +1488,7 @@ void SinglyLinkedList::updateAutoplay(float deltaSeconds, float speedMultiplier,
 	}
 }
 
+//Return the currently selected timeline frame with bounds safety.
 const SLLFrame& SinglyLinkedList::currentFrame() const
 {
 	static const SLLFrame kEmptyFrame{};
@@ -1474,6 +1501,7 @@ const SLLFrame& SinglyLinkedList::currentFrame() const
 	return timeline[cursor];
 }
 
+//Update interpolation progress between previous and current timeline frame.
 void SinglyLinkedList::updateInterpolation(float deltaSeconds)
 {
 	if (!interpolation.isTransitioning) {
@@ -1487,6 +1515,7 @@ void SinglyLinkedList::updateInterpolation(float deltaSeconds)
 	}
 }
 
+//Return interpolated frame while animating, otherwise current frame.
 const SLLFrame& SinglyLinkedList::getInterpolatedFrame() const
 {
 	if (!interpolation.isTransitioning) {
@@ -1495,11 +1524,13 @@ const SLLFrame& SinglyLinkedList::getInterpolatedFrame() const
 	return interpolation.currentFrame;
 }
 
+//Check whether timeline contains any frames.
 bool SinglyLinkedList::hasTimeline() const
 {
 	return !timeline.empty();
 }
 
+//Rebuild a single-frame idle timeline for non-animated state/messages.
 void SinglyLinkedList::rebuildIdleTimeline(const std::string& message, int codeLine)
 {
 	timeline.clear();
@@ -1513,6 +1544,7 @@ void SinglyLinkedList::rebuildIdleTimeline(const std::string& message, int codeL
 	interpolation.transitionProgress = 0.0f;
 }
 
+//Capture current list snapshot as a timeline frame with markers and message.
 void SinglyLinkedList::pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType)
 {
 	SLLFrame frame;
@@ -1525,6 +1557,7 @@ void SinglyLinkedList::pushFrame(int activeIndex, int secondaryIndex, int codeLi
 	timeline.push_back(std::move(frame));
 }
 
+//Finalize timeline after frame generation and sync playback metadata.
 void SinglyLinkedList::commitTimeline(const std::string& fallbackMessage)
 {
 	if (timeline.empty()) {
@@ -1540,6 +1573,7 @@ void SinglyLinkedList::commitTimeline(const std::string& fallbackMessage)
 /// These build timestep-by-step animations before executing operations
 ///-----------------------------------
 
+//Build animated add-operation timeline and then apply data mutation.
 void SinglyLinkedList::addAtViz(std::size_t index, int value)
 {
 	if (index > values.size()) {
@@ -1575,6 +1609,7 @@ void SinglyLinkedList::addAtViz(std::size_t index, int value)
 	commitTimeline("Add complete");
 }
 
+//Build animated delete-operation timeline and then apply data mutation.
 void SinglyLinkedList::deleteAtViz(std::size_t index)
 {
 	if (values.empty()) {
@@ -1615,6 +1650,7 @@ void SinglyLinkedList::deleteAtViz(std::size_t index)
 	commitTimeline("Delete complete");
 }
 
+//Build animated update-operation timeline and then apply data mutation.
 void SinglyLinkedList::updateAtViz(std::size_t index, int value)
 {
 	if (index >= values.size()) {
@@ -1635,6 +1671,7 @@ void SinglyLinkedList::updateAtViz(std::size_t index, int value)
 	commitTimeline("Update complete");
 }
 
+//Build animated search-operation timeline and stop on found/not-found result.
 void SinglyLinkedList::searchValueViz(int value)
 {
 	timeline.clear();
