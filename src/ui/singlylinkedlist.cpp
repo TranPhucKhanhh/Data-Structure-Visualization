@@ -387,7 +387,9 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings)) {
-		ImGui::TextUnformatted("DATA STRUCTURES");
+		if (ImGui::Button("DATA STRUCTURES", ImVec2(150.0f, 0.0f))) {
+			uiConfig.state = UIState::Menu;
+		}
 		ImGui::SameLine(180.0f);
 
 		if (ImGui::Button("Singly Linked List")) {
