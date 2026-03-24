@@ -656,18 +656,21 @@ void SinglyLinkedListUI::draw() {
 	if (animatedCommentWidth > 6.0f) {
 		ImGui::SetNextWindowPos(ImVec2(rightTabX - animatedCommentWidth, commentY), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(animatedCommentWidth, commentH), ImGuiCond_Always);
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.73f, 0.84f, 0.12f, 0.95f));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.55f, 0.16f, 0.96f));
 		if (ImGui::Begin("Traversal Comment##SLLComment", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoCollapse)) {
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoScrollbar)) {
 			if (commentPanelOpenT_ > 0.55f) {
 				const char* status = displayFrame.message.empty() ? singlyLinkedList.lastMessage.c_str() : displayFrame.message.c_str();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.14f, 0.10f, 0.07f, 1.0f));
+				ImGui::SetWindowFontScale(1.12f);
 				ImGui::TextWrapped("%s", status);
-				ImGui::Text("Frame: %zu / %zu",
-					singlyLinkedList.timeline.empty() ? 0 : (singlyLinkedList.cursor + 1),
-					singlyLinkedList.timeline.size());
+				ImGui::SetWindowFontScale(1.0f);
+				ImGui::PopStyleColor();
 			}
 		}
 		ImGui::End();
@@ -676,7 +679,7 @@ void SinglyLinkedListUI::draw() {
 
 	ImGui::SetNextWindowPos(ImVec2(rightTabX, commentY), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(rightTabWidth, commentH), ImGuiCond_Always);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.73f, 0.84f, 0.12f, 0.95f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.55f, 0.16f, 0.96f));
 	if (ImGui::Begin("Traversal Comment Toggle##SLLCommentToggle", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -695,37 +698,38 @@ void SinglyLinkedListUI::draw() {
 	if (animatedCodeWidth > 6.0f) {
 		ImGui::SetNextWindowPos(ImVec2(rightTabX - animatedCodeWidth, codeY), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(animatedCodeWidth, codeH), ImGuiCond_Always);
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.80f, 0.25f, 0.20f, 0.95f));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.78f, 0.08f, 0.96f));
 		if (ImGui::Begin("Source Code##SLLCode", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoCollapse)) {
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoScrollbar)) {
 			if (codePanelOpenT_ > 0.55f) {
-				ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.03f, 0.03f, 0.03f, 0.95f));
-				if (ImGui::BeginChild("##SLLCodeChild", ImVec2(0.0f, 0.0f), true)) {
-					const char** codeArray = nullptr;
-					int lineCount = 0;
-					SLLCodeVariant codeVariant = SLLCodeVariant::None;
-					pickCodeBlock(displayedOpType, displayedCodeLine, &displayFrame, codeArray, lineCount, &codeVariant);
-					const int highlightedLine = mapTimelineLineToPseudoLine(codeVariant, displayedCodeLine);
-					if (codeArray == nullptr || lineCount == 0) {
-						ImGui::TextUnformatted("Initialization has no pseudocode block.");
-					}
-					else {
-						for (int i = 0; i < lineCount; ++i) {
-							if ((i + 1) == highlightedLine) {
-								ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.15f, 1.0f), "> %s", codeArray[i]);
-							}
-							else {
-								ImGui::TextColored(ImVec4(0.88f, 0.88f, 0.88f, 1.0f), "%s", codeArray[i]);
-							}
-						}
-						}
-					}
-				ImGui::EndChild();
-				ImGui::PopStyleColor();
+				const char** codeArray = nullptr;
+				int lineCount = 0;
+				SLLCodeVariant codeVariant = SLLCodeVariant::None;
+				pickCodeBlock(displayedOpType, displayedCodeLine, &displayFrame, codeArray, lineCount, &codeVariant);
+				const int highlightedLine = mapTimelineLineToPseudoLine(codeVariant, displayedCodeLine);
+				if (codeArray == nullptr || lineCount == 0) {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.19f, 0.13f, 0.06f, 1.0f));
+					ImGui::TextUnformatted("Initialization has no pseudocode block.");
+					ImGui::PopStyleColor();
 				}
+				else {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
+					for (int i = 0; i < lineCount; ++i) {
+						if ((i + 1) == highlightedLine) {
+							ImGui::TextColored(ImVec4(0.05f, 0.05f, 0.05f, 1.0f), "> %s", codeArray[i]);
+						}
+						else {
+							ImGui::TextUnformatted(codeArray[i]);
+						}
+					}
+					ImGui::PopStyleColor();
+				}
+			}
 		}
 		ImGui::End();
 		ImGui::PopStyleColor();
@@ -733,7 +737,7 @@ void SinglyLinkedListUI::draw() {
 
 	ImGui::SetNextWindowPos(ImVec2(rightTabX, codeY), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(rightTabWidth, codeH), ImGuiCond_Always);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.80f, 0.25f, 0.20f, 0.95f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.78f, 0.08f, 0.96f));
 	if (ImGui::Begin("Source Code Toggle##SLLCodeToggle", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -854,16 +858,24 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		return;
 	}
 
-	const float radius = std::clamp(nodeRadius_, 18.0f, 42.0f);
-	const float diameter = radius * 2.0f;
-	const float spacing = diameter + 50.0f;
-
 	const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
 	const bool mouseInsideCanvas =
 		mousePos.x >= 0 && mousePos.y >= 0 &&
 		mousePos.x < static_cast<int>(size.x) &&
 		mousePos.y < static_cast<int>(size.y);
 	const bool canDragCanvas = mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
+
+	if (canDragCanvas) {
+		const float wheel = ImGui::GetIO().MouseWheel;
+		if (std::abs(wheel) > 0.001f) {
+			const float zoomStep = 1.0f + wheel * 0.12f;
+			zoomScale_ = std::clamp(zoomScale_ * zoomStep, 0.55f, 2.2f);
+		}
+	}
+
+	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
+	const float diameter = radius * 2.0f;
+	const float spacing = diameter + (50.0f * zoomScale_);
 	const bool isDragPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
 
 	if (canDragCanvas && isDragPressed) {

@@ -35,6 +35,7 @@ private:
 	float playbackSpeed_ = 1.0f;
 	float scrollOffset_ = 0.0f;
 	float canvasOffsetY_ = 0.0f;
+	float zoomScale_ = 1.0f;
 	float nodeRadius_ = 28.0f;
 	float edgeThickness_ = 3.0f;
 	float fontScale_ = 1.0f;
