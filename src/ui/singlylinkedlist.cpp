@@ -11,64 +11,241 @@
 #include <string>
 
 namespace {
+	enum class SLLCodeVariant {
+		None,
+		InsertFirst,
+		InsertEnd,
+		InsertMiddle,
+		DeleteFirst,
+		DeleteEnd,
+		DeleteMiddle,
+		Search,
+		Update
+	};
+
 	float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
 	}
 
-	const char* kAddCode[] = {
-		"1  if (index > size) return false;",
-		"2  for (i = 0; i < index; ++i)",
-		"3  newNode = Node(value);",
-		"4  prev->next = newNode (or head = newNode);",
-		"5  newNode->next = next;",
-		"6  return true;"
+	const char* kInsertFirstCode[] = {
+		"1  FUNCTION insertFirst(head, value):",
+		"2      // no traversal needed (insert at head)",
+		"3      newNode = Create Node(value)",
+		"4      head = newNode",
+		"5      newNode.next = oldHead"
 	};
 
-	const char* kDeleteCode[] = {
-		"1  if (list.empty()) return false;",
-		"2  for (i = 0; i <= index; ++i)",
-		"3  target = node at index;",
-		"4  remove target node;",
-		"5  prev->next = afterTarget (or head = head->next);",
-		"6  return true;"
+	const char* kInsertEndCode[] = {
+		"1  FUNCTION insertEnd(head, value):",
+		"2      temp = head; WHILE temp.next != null: temp = temp.next",
+		"3      newNode = Create Node(value)",
+		"4      temp.next = newNode",
+		"5      newNode.next = null"
 	};
 
-	const char* kUpdateCode[] = {
-		"1  if (index >= size) return false;",
-		"2  for (i = 0; i <= index; ++i)",
-		"3      values[i] = newVal; done;",
-		"4  return true;"
+	const char* kInsertMiddleCode[] = {
+		"1  FUNCTION insertMiddle(head, value, position):",
+		"2      temp = head; FOR i in [1..position-1]: temp = temp.next",
+		"3      newNode = Create Node(value)",
+		"4      temp.next = newNode",
+		"5      newNode.next = nextNode"
+	};
+
+	const char* kDeleteFirstCode[] = {
+		"1  FUNCTION deleteFirst(head):",
+		"2      // no traversal needed (target is head)",
+		"3      target = head",
+		"4      remove target node",
+		"5      head = head.next"
+	};
+
+	const char* kDeleteEndCode[] = {
+		"1  FUNCTION deleteEnd(head):",
+		"2      temp = head; WHILE temp.next != tail: temp = temp.next",
+		"3      target = tail",
+		"4      remove target node",
+		"5      temp.next = null"
+	};
+
+	const char* kDeleteMiddleCode[] = {
+		"1  FUNCTION deleteMiddle(head, position):",
+		"2      temp = head; FOR i in [1..position-1]: temp = temp.next",
+		"3      target = temp.next",
+		"4      remove target node",
+		"5      temp.next = nodeAfterTarget"
 	};
 
 	const char* kSearchCode[] = {
-		"1  for (i = 0; i < size; ++i)",
-		"2      if (values[i] == target)",
-		"3          return found_at(i);",
-		"4  return not_found;"
+		"1  FUNCTION search(head, target):",
+		"2      compare current node with target",
+		"3      RETURN True (Found)",
+		"4      RETURN False (Not Found)"
 	};
 
-	void pickCodeBlock(SLLOperationType opType, const char**& codeArray, int& lineCount)
+	const char* kUpdateCode[] = {
+		"1  FUNCTION update(head, oldValue, newValue):",
+		"2      traverse to target node",
+		"3      current.data = newValue"
+	};
+
+	SLLCodeVariant detectAddVariant(const SLLFrame* frame, int activeLine)
 	{
+		if (frame == nullptr) {
+			return SLLCodeVariant::None;
+		}
+
+		int index = -1;
+		if (activeLine == 5) {
+			index = frame->activeIndex;
+		}
+		else {
+			index = frame->secondaryIndex;
+		}
+
+		if (index < 0) {
+			return SLLCodeVariant::None;
+		}
+
+		const int currentSize = static_cast<int>(frame->values.size());
+		const bool isStartFrame = frame->message.find("Start add operation") != std::string::npos;
+		const int endIndex = isStartFrame ? currentSize : (currentSize - 1);
+
+		if (index == 0) {
+			return SLLCodeVariant::InsertFirst;
+		}
+		else if (index == endIndex) {
+			return SLLCodeVariant::InsertEnd;
+		}
+		else {
+			return SLLCodeVariant::InsertMiddle;
+		}
+	}
+
+	SLLCodeVariant detectDeleteVariant(const SLLFrame* frame, int activeLine)
+	{
+		if (frame == nullptr) {
+			return SLLCodeVariant::None;
+		}
+
+		if (frame->message.find("Move head to next node") != std::string::npos
+			|| frame->message.find("Delete first") != std::string::npos
+			|| frame->message.find("Deleted first node") != std::string::npos) {
+			return SLLCodeVariant::DeleteFirst;
+		}
+
+		if (activeLine == 5) {
+			return (frame->secondaryIndex < 0) ? SLLCodeVariant::DeleteEnd : SLLCodeVariant::DeleteMiddle;
+		}
+
+		if ((activeLine == 3 || activeLine == 4) && frame->activeIndex == 0) {
+			return SLLCodeVariant::DeleteFirst;
+		}
+
+		return SLLCodeVariant::None;
+	}
+
+	int mapTimelineLineToPseudoLine(SLLCodeVariant variant, int timelineLine)
+	{
+		switch (variant) {
+		case SLLCodeVariant::InsertFirst:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::InsertEnd:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::InsertMiddle:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::DeleteFirst:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::DeleteEnd:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::DeleteMiddle:
+			return std::clamp(timelineLine, 1, 5);
+		case SLLCodeVariant::Search:
+			return std::clamp(timelineLine, 1, 4);
+		case SLLCodeVariant::Update:
+			return std::clamp(timelineLine, 1, 3);
+		default:
+			return timelineLine;
+		}
+	}
+
+	void pickCodeBlock(SLLOperationType opType, int activeLine, const SLLFrame* frame, const char**& codeArray, int& lineCount, SLLCodeVariant* variantOut = nullptr)
+	{
+		static SLLCodeVariant lastAddVariant = SLLCodeVariant::InsertMiddle;
+		static SLLCodeVariant lastDeleteVariant = SLLCodeVariant::DeleteMiddle;
+		static bool addVariantLocked = false;
+
+		if (variantOut != nullptr) {
+			*variantOut = SLLCodeVariant::None;
+		}
 		switch (opType) {
 		case SLLOperationType::Add:
-			codeArray = kAddCode;
-			lineCount = 6;
+			{
+				if (frame != nullptr && frame->message.find("Start add operation") != std::string::npos) {
+					addVariantLocked = false;
+				}
+
+				SLLCodeVariant variant = addVariantLocked ? lastAddVariant : detectAddVariant(frame, activeLine);
+				if (variant == SLLCodeVariant::None) {
+					variant = lastAddVariant;
+				}
+				else {
+					lastAddVariant = variant;
+					addVariantLocked = true;
+				}
+				if (variant == SLLCodeVariant::InsertFirst) {
+					codeArray = kInsertFirstCode;
+					lineCount = 5;
+				}
+				else if (variant == SLLCodeVariant::InsertEnd) {
+					codeArray = kInsertEndCode;
+					lineCount = 5;
+				}
+				else {
+					variant = SLLCodeVariant::InsertMiddle;
+					codeArray = kInsertMiddleCode;
+					lineCount = 5;
+				}
+				if (variantOut != nullptr) *variantOut = variant;
+			}
 			break;
 		case SLLOperationType::Delete:
-			codeArray = kDeleteCode;
-			lineCount = 6;
+			{
+				SLLCodeVariant variant = detectDeleteVariant(frame, activeLine);
+				if (variant == SLLCodeVariant::None) {
+					variant = lastDeleteVariant;
+				}
+				if (variant == SLLCodeVariant::DeleteFirst) {
+					codeArray = kDeleteFirstCode;
+					lineCount = 5;
+				}
+				else if (variant == SLLCodeVariant::DeleteEnd) {
+					codeArray = kDeleteEndCode;
+					lineCount = 5;
+				}
+				else {
+					variant = SLLCodeVariant::DeleteMiddle;
+					codeArray = kDeleteMiddleCode;
+					lineCount = 5;
+				}
+				lastDeleteVariant = variant;
+				if (variantOut != nullptr) *variantOut = variant;
+			}
 			break;
 		case SLLOperationType::Update:
 			codeArray = kUpdateCode;
-			lineCount = 4;
+			lineCount = 3;
+			if (variantOut != nullptr) *variantOut = SLLCodeVariant::Update;
 			break;
 		case SLLOperationType::Search:
 			codeArray = kSearchCode;
 			lineCount = 4;
+			if (variantOut != nullptr) *variantOut = SLLCodeVariant::Search;
 			break;
 		default:
+			addVariantLocked = false;
 			codeArray = nullptr;
 			lineCount = 0;
+			if (variantOut != nullptr) *variantOut = SLLCodeVariant::None;
 			break;
 		}
 	}
@@ -91,8 +268,14 @@ namespace {
 
 		const char** codeArray = nullptr;
 		int lineCount = 0;
-		pickCodeBlock(opType, codeArray, lineCount);
+		SLLCodeVariant codeVariant = SLLCodeVariant::None;
+		pickCodeBlock(opType, activeLine, nullptr, codeArray, lineCount, &codeVariant);
+		const int highlightedLine = mapTimelineLineToPseudoLine(codeVariant, activeLine);
 		switch (opType) {
+		case SLLOperationType::Initialize:
+			ImGui::TextUnformatted("Operation: Initialize");
+			ImGui::End();
+			return;
 		case SLLOperationType::Add:
 			ImGui::TextUnformatted("Operation: Add");
 			break;
@@ -113,7 +296,7 @@ namespace {
 
 		ImGui::Separator();
 		for (int i = 0; i < lineCount; ++i) {
-			if ((i + 1) == activeLine) {
+			if ((i + 1) == highlightedLine) {
 				ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.15f, 1.0f), "> %s", codeArray[i]);
 			}
 			else {
@@ -163,113 +346,23 @@ SinglyLinkedListUI::SinglyLinkedListUI() {
 }
 
 void SinglyLinkedListUI::draw() {
-	ImGui::SetNextWindowPos(ImVec2(16.0f, 16.0f), ImGuiCond_Once);
-	ImGui::SetNextWindowSize(ImVec2(450.0f, 860.0f), ImGuiCond_Once);
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	const ImVec2 vpPos = viewport->Pos;
+	const ImVec2 vpSize = viewport->Size;
+	const float dt = ImGui::GetIO().DeltaTime;
+	bool userDefinedInputActiveThisFrame = false;
+	const bool wantsTextInput = ImGui::GetIO().WantTextInput;
+	const float foldLerp = 1.0f - std::exp(-14.0f * dt);
 
-	if (!ImGui::Begin("Singly Linked List Visualizer")) {
-		ImGui::End();
-		return;
-	}
-
-	singlyLinkedList.updateInterpolation(ImGui::GetIO().DeltaTime);
-	singlyLinkedList.updateAutoplay(ImGui::GetIO().DeltaTime, playbackSpeed_, autoplay_ && playbackMode_ == PlaybackMode::RunAtOnce);
-
-	ImGui::TextUnformatted("Initialize");
-	if (ImGui::Button("Create empty list")) {
-		singlyLinkedList.initializeEmpty();
-	}
-	ImGui::SameLine();
-	ImGui::PushItemWidth(70.0f);
-	ImGui::InputInt("Random count", &randomCount_);
-	ImGui::SameLine();
-	ImGui::InputInt("Min##range", &randomMin_);
-	ImGui::SameLine();
-	ImGui::InputInt("Max##range", &randomMax_);
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Randomize")) {
-		singlyLinkedList.initializeRandom(randomCount_, randomMin_, randomMax_);
-	}
-
-	ImGui::InputText("Text file path##sll", txtPath_.data(), txtPath_.size());
-	ImGui::SameLine();
-	if (ImGui::Button("Load txt")) {
-		singlyLinkedList.initializeFromTextFile(txtPath_.data());
-	}
-	ImGui::InputText("JSON file path##sll", jsonPath_.data(), jsonPath_.size());
-	ImGui::SameLine();
-	if (ImGui::Button("Load json")) {
-		singlyLinkedList.initializeFromJsonFile(jsonPath_.data());
-	}
-
-	ImGui::SeparatorText("Operations");
-	ImGui::PushItemWidth(90.0f);
-	ImGui::InputInt("Add index##add", &addIndex_);
-	ImGui::SameLine();
-	ImGui::InputInt("Add value##add", &addValue_);
-	ImGui::SameLine();
-	if (ImGui::Button("Add")) {
-		singlyLinkedList.addAt(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
-	}
-
-	ImGui::InputInt("Delete index##del", &deleteIndex_);
-	ImGui::SameLine();
-	if (ImGui::Button("Delete")) {
-		singlyLinkedList.deleteAt(static_cast<std::size_t>(std::max(0, deleteIndex_)));
-	}
-
-	ImGui::InputInt("Update index##upd", &updateIndex_);
-	ImGui::SameLine();
-	ImGui::InputInt("Update value##upd", &updateValue_);
-	ImGui::SameLine();
-	if (ImGui::Button("Update")) {
-		singlyLinkedList.updateAt(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
-	}
-
-	ImGui::InputInt("Search value##search", &searchValue_);
-	ImGui::SameLine();
-	if (ImGui::Button("Search")) {
-		singlyLinkedList.searchValue(searchValue_);
-	}
-	ImGui::PopItemWidth();
-
-	ImGui::SeparatorText("Playback Controls");
-	int mode = playbackMode_ == PlaybackMode::StepByStep ? 0 : 1;
-	ImGui::RadioButton("Step by step##sll", &mode, 0);
-	ImGui::SameLine();
-	ImGui::RadioButton("Run at once##sll", &mode, 1);
-	playbackMode_ = (mode == 0) ? PlaybackMode::StepByStep : PlaybackMode::RunAtOnce;
-
-	if (ImGui::Button("Prev")) {
-		autoplay_ = false;
-		playbackMode_ = PlaybackMode::StepByStep;
-		singlyLinkedList.stepBackward();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Next")) {
-		autoplay_ = false;
-		playbackMode_ = PlaybackMode::StepByStep;
-		singlyLinkedList.stepForward();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Final")) {
-		autoplay_ = false;
-		singlyLinkedList.jumpToFinal();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Reset")) {
-		autoplay_ = false;
-		singlyLinkedList.jumpToStart();
-	}
-	ImGui::SameLine();
-	ImGui::Checkbox("Autoplay##sll", &autoplay_);
-
-	ImGui::SliderFloat("Playback Speed##sll", &playbackSpeed_, 0.25f, 5.0f, "%.2fx");
-	ImGui::Checkbox("Show code overlay##sll", &showCodeOverlay_);
-	ImGui::SeparatorText("Style");
-	ImGui::SliderFloat("Node radius##sll", &nodeRadius_, 12.0f, 60.0f, "%.1f");
-	ImGui::SliderFloat("Edge thickness##sll", &edgeThickness_, 1.0f, 8.0f, "%.1f");
-	ImGui::SliderFloat("Font scale##sll", &fontScale_, 0.75f, 2.0f, "%.2f");
+	const float operationTarget = operationPanelCollapsed_ ? 0.0f : 1.0f;
+	const float commentTarget = commentPanelCollapsed_ ? 0.0f : 1.0f;
+	const float codeTarget = codePanelCollapsed_ ? 0.0f : 1.0f;
+	operationPanelOpenT_ = lerp(operationPanelOpenT_, operationTarget, foldLerp);
+	commentPanelOpenT_ = lerp(commentPanelOpenT_, commentTarget, foldLerp);
+	codePanelOpenT_ = lerp(codePanelOpenT_, codeTarget, foldLerp);
+	operationPanelOpenT_ = std::clamp(operationPanelOpenT_, 0.0f, 1.0f);
+	commentPanelOpenT_ = std::clamp(commentPanelOpenT_, 0.0f, 1.0f);
+	codePanelOpenT_ = std::clamp(codePanelOpenT_, 0.0f, 1.0f);
 
 	const SLLFrame displayFrame = singlyLinkedList.getInterpolatedFrame();
 	int displayedCodeLine = displayFrame.codeLine;
@@ -286,30 +379,449 @@ void SinglyLinkedListUI::draw() {
 		}
 	}
 
-	ImGui::Text("Frame: %zu / %zu | Status: %s",
-		singlyLinkedList.timeline.empty() ? 0 : (singlyLinkedList.cursor + 1),
-		singlyLinkedList.timeline.size(),
-		displayFrame.message.empty() ? singlyLinkedList.lastMessage.c_str() : displayFrame.message.c_str());
+	ImGui::SetNextWindowPos(vpPos);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f));
+	ImGui::SetNextWindowBgAlpha(0.95f);
+	if (ImGui::Begin("##SLLTopBar", nullptr,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings)) {
+		if (ImGui::Button("DATA STRUCTURES", ImVec2(150.0f, 0.0f))) {
+			uiConfig.state = UIState::Menu;
+		}
+		ImGui::SameLine(180.0f);
 
-	float maxScroll = computeMaxScroll(displayFrame, ImGui::GetMainViewport()->Size.x - 80.0f, nodeRadius_);
-	if (maxScroll > 0.0f) {
-		ImGui::SetNextItemWidth(-1.0f);
-		ImGui::SliderFloat("Horizontal Scroll##sll", &scrollOffset_, 0.0f, maxScroll, "%.0f");
-		scrollOffset_ = std::clamp(scrollOffset_, 0.0f, maxScroll);
+		if (ImGui::Button("Singly Linked List")) {
+			uiConfig.state = UIState::SinglyLinkedList;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Trie")) {
+			uiConfig.state = UIState::Trie;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Heap")) {
+			uiConfig.state = UIState::Heap;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Shortest Path")) {
+			uiConfig.state = UIState::ShortestPath;
+		}
 	}
-	else {
-		scrollOffset_ = 0.0f;
-	}
-	if (showCodeOverlay_) {
-		drawCodeOverlay(displayedCodeLine, displayedOpType);
-	}
-
-	if (ImGui::Button("Back to menu")) {
-		autoplay_ = false;
-		uiConfig.state = UIState::Menu;
-	}
-
 	ImGui::End();
+
+	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
+	ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(52.0f, 200.0f), ImGuiCond_Always);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
+	if (ImGui::Begin("Operation Toggle##SLL", nullptr,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings)) {
+		ImGui::SetCursorPosY(84.0f);
+		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f, 32.0f))) {
+			operationPanelCollapsed_ = !operationPanelCollapsed_;
+		}
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+
+	const float operationPanelWidth = 190.0f * operationPanelOpenT_;
+	if (operationPanelWidth > 6.0f) {
+		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f, drawerBottomY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f), ImGuiCond_Always);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
+		if (ImGui::Begin("Operations##SLLOperations", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(2.0f);
+			if (operationPanelOpenT_ > 0.6f) {
+				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.12f, 0.42f, 0.20f, 0.98f));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 9.0f));
+				const char* operationNames[] = { "Create(A)", "Search", "Insert", "Remove", "Update", "Customize" };
+				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
+				for (int i = 0; i < 6; ++i) {
+					if (ImGui::Selectable(operationNames[i], operationMenuIndex_ == i, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(menuRowWidth, 0.0f))) {
+						operationMenuIndex_ = i;
+					}
+				}
+				ImGui::PopStyleVar();
+				ImGui::PopStyleColor(3);
+			}
+		}
+		ImGui::End();
+		ImGui::PopStyleColor();
+
+		const float inputPanelWidth = 700.0f * operationPanelOpenT_;
+		//const bool showCreateEditor = operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0 && userDefinedListExpanded_;
+		const float inputPanelHeight = 200.0f; //showCreateEditor ? 150.0f : 72.0f;
+		const float inputPanelX = vpPos.x + 52.0f + operationPanelWidth + 2.0f;
+		ImGui::SetNextWindowPos(ImVec2(inputPanelX, drawerBottomY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(inputPanelWidth, inputPanelHeight), ImGuiCond_Always);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
+		if (ImGui::Begin("Operation Inputs##SLLOpInputs", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(1.30f);
+			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
+				if (ImGui::Button("Empty", ImVec2(56.0f, 0.0f))) {
+					singlyLinkedList.initializeEmpty();
+					userDefinedListExpanded_ = false;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("User Defined List", ImVec2(200.0f, 0.0f))) {
+					userDefinedListExpanded_ = !userDefinedListExpanded_;
+				}
+				ImGui::SameLine();
+				ImGui::TextUnformatted("N =");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(100.0f);
+				ImGui::InputInt("##CreateCount", &randomCount_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				if (ImGui::Button("Random", ImVec2(78.0f, 0.0f))) {
+					singlyLinkedList.initializeRandom(randomCount_, randomMin_, randomMax_);
+					userDefinedListExpanded_ = false;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Random Sorted", ImVec2(122.0f, 0.0f))) {
+					singlyLinkedList.initializeRandomSorted(randomCount_, randomMin_, randomMax_);
+					userDefinedListExpanded_ = false;
+				}
+
+				if (userDefinedListExpanded_) {
+					ImGui::Separator();
+					ImGui::TextUnformatted("A =");
+					ImGui::SameLine();
+					ImGui::PushItemWidth(240.0f);
+					ImGui::InputText("##UserDefinedValues", userDefinedList_.data(), userDefinedList_.size());
+					userDefinedInputActiveThisFrame = ImGui::IsItemActive();
+					ImGui::PopItemWidth();
+					ImGui::SameLine();
+					if (ImGui::Button("Go", ImVec2(56.0f, 0.0f))) {
+						const std::vector<int> parsed = singlyLinkedList.parseIntegers(userDefinedList_.data());
+						if (parsed.empty()) {
+							singlyLinkedList.lastMessage = "Initialize failed: enter comma-separated integers";
+							singlyLinkedList.rebuildIdleTimeline(singlyLinkedList.lastMessage, 1);
+						}
+						else {
+							singlyLinkedList.initializeFromValues(parsed, "Initialized from user defined list");
+						}
+					}
+
+					ImGui::PushItemWidth(320.0f);
+					ImGui::InputText(".txt path", txtPath_.data(), txtPath_.size());
+					ImGui::PopItemWidth();
+					ImGui::SameLine();
+					if (ImGui::Button("Load txt", ImVec2(92.0f, 0.0f))) {
+						singlyLinkedList.initializeFromTextFile(txtPath_.data());
+					}
+				}
+			}
+			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
+				ImGui::TextUnformatted("Value:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(90.0f);
+				ImGui::InputInt("##SearchValue", &searchValue_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				if (ImGui::Button("Search", ImVec2(90.0f, 0.0f))) {
+					singlyLinkedList.searchValueViz(searchValue_);
+				}
+			}
+			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
+				ImGui::TextUnformatted("Index:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				ImGui::InputInt("##InsertIndex", &addIndex_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				ImGui::TextUnformatted("Value:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				ImGui::InputInt("##InsertValue", &addValue_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				if (ImGui::Button("Insert", ImVec2(90.0f, 0.0f))) {
+					singlyLinkedList.addAtViz(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
+				}
+			}
+			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
+				ImGui::TextUnformatted("Index:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(90.0f);
+				ImGui::InputInt("##RemoveIndex", &deleteIndex_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				if (ImGui::Button("Remove", ImVec2(90.0f, 0.0f))) {
+					singlyLinkedList.deleteAtViz(static_cast<std::size_t>(std::max(0, deleteIndex_)));
+				}
+			}
+			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
+				ImGui::TextUnformatted("Index:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				ImGui::InputInt("##UpdateIndex", &updateIndex_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				ImGui::TextUnformatted("Value:");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				ImGui::InputInt("##UpdateValue", &updateValue_);
+				ImGui::PopItemWidth();
+				ImGui::SameLine();
+				if (ImGui::Button("Update", ImVec2(90.0f, 0.0f))) {
+					singlyLinkedList.updateAtViz(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
+				}
+			}
+			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
+				ImGui::SetWindowFontScale(1.0f);
+				ImGui::TextUnformatted("Style");
+				ImGui::SameLine();
+				const char* stylePresets[] = { "Classic", "Minimal", "Bold" };
+				ImGui::PushItemWidth(150.0f);
+				ImGui::Combo("##StylePreset", &visualStylePreset_, stylePresets, IM_ARRAYSIZE(stylePresets));
+				ImGui::PopItemWidth();
+
+				ImGui::PushItemWidth(240.0f);
+				ImGui::SliderFloat("Node Size", &nodeRadius_, 18.0f, 44.0f, "%.1f");
+				ImGui::SliderFloat("Border Size", &edgeThickness_, 1.0f, 8.0f, "%.1f");
+				ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
+				ImGui::PopItemWidth();
+
+				auto editColor = [&](const char* label, sf::Color& c) {
+					float col[4] = {
+						static_cast<float>(c.r) / 255.0f,
+						static_cast<float>(c.g) / 255.0f,
+						static_cast<float>(c.b) / 255.0f,
+						static_cast<float>(c.a) / 255.0f
+					};
+					if (ImGui::ColorEdit4(label, col, ImGuiColorEditFlags_NoInputs)) {
+						c = sf::Color(
+							static_cast<std::uint8_t>(std::clamp(col[0], 0.0f, 1.0f) * 255.0f),
+							static_cast<std::uint8_t>(std::clamp(col[1], 0.0f, 1.0f) * 255.0f),
+							static_cast<std::uint8_t>(std::clamp(col[2], 0.0f, 1.0f) * 255.0f),
+							static_cast<std::uint8_t>(std::clamp(col[3], 0.0f, 1.0f) * 255.0f)
+						);
+					}
+				};
+
+				editColor("Canvas", canvasBgColor_);
+				editColor("Node", nodeBaseColor_);
+				editColor("Active Node", activeNodeColor_);
+				editColor("Secondary Node", secondaryNodeColor_);
+				editColor("Edge", edgeColor_);
+				editColor("Value Text", valueTextColor_);
+				editColor("Index Text", indexTextColor_);
+
+				if (ImGui::Button("Reset Visuals", ImVec2(120.0f, 0.0f))) {
+					visualStylePreset_ = 0;
+					nodeRadius_ = 28.0f;
+					edgeThickness_ = 3.0f;
+					fontScale_ = 1.0f;
+					canvasBgColor_ = sf::Color(255, 255, 255, 255);
+					nodeBaseColor_ = sf::Color(230, 230, 230, 255);
+					activeNodeColor_ = sf::Color(245, 158, 11, 255);
+					secondaryNodeColor_ = sf::Color(156, 163, 175, 255);
+					deleteNodeColor_ = sf::Color(239, 68, 68, 255);
+					edgeColor_ = sf::Color(70, 70, 70, 255);
+					valueTextColor_ = sf::Color(42, 42, 42, 255);
+					indexTextColor_ = sf::Color(68, 68, 68, 255);
+					highlightRingColor_ = sf::Color(255, 214, 102, 230);
+				}
+			}
+		}
+		ImGui::End();
+		ImGui::PopStyleColor();
+	}
+
+	const float rightTabWidth = 26.0f;
+	const float rightPanelWidth = 480.0f;
+	const float commentY = vpPos.y + vpSize.y - 450.0f;
+	const float commentH = 115.0f;
+	const float codeY = vpPos.y + vpSize.y - 300.0f;
+	const float codeH = 170.0f;
+	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
+
+	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
+	if (animatedCommentWidth > 6.0f) {
+		ImGui::SetNextWindowPos(ImVec2(rightTabX - animatedCommentWidth, commentY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(animatedCommentWidth, commentH), ImGuiCond_Always);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.55f, 0.16f, 0.96f));
+		if (ImGui::Begin("Traversal Comment##SLLComment", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoScrollbar)) {
+			if (commentPanelOpenT_ > 0.55f) {
+				const char* status = displayFrame.message.empty() ? singlyLinkedList.lastMessage.c_str() : displayFrame.message.c_str();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.14f, 0.10f, 0.07f, 1.0f));
+				ImGui::SetWindowFontScale(1.12f);
+				ImGui::TextWrapped("%s", status);
+				ImGui::SetWindowFontScale(1.0f);
+				ImGui::PopStyleColor();
+			}
+		}
+		ImGui::End();
+		ImGui::PopStyleColor();
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(rightTabX, commentY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(rightTabWidth, commentH), ImGuiCond_Always);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.55f, 0.16f, 0.96f));
+	if (ImGui::Begin("Traversal Comment Toggle##SLLCommentToggle", nullptr,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoScrollbar)) {
+		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f);
+		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+			commentPanelCollapsed_ = !commentPanelCollapsed_;
+		}
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+
+	const float animatedCodeWidth = rightPanelWidth * codePanelOpenT_;
+	if (animatedCodeWidth > 6.0f) {
+		ImGui::SetNextWindowPos(ImVec2(rightTabX - animatedCodeWidth, codeY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(animatedCodeWidth, codeH), ImGuiCond_Always);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.78f, 0.08f, 0.96f));
+		if (ImGui::Begin("Source Code##SLLCode", nullptr,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoScrollbar)) {
+			if (codePanelOpenT_ > 0.55f) {
+				const char** codeArray = nullptr;
+				int lineCount = 0;
+				SLLCodeVariant codeVariant = SLLCodeVariant::None;
+				pickCodeBlock(displayedOpType, displayedCodeLine, &displayFrame, codeArray, lineCount, &codeVariant);
+				const int highlightedLine = mapTimelineLineToPseudoLine(codeVariant, displayedCodeLine);
+				if (codeArray == nullptr || lineCount == 0) {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.19f, 0.13f, 0.06f, 1.0f));
+					ImGui::TextUnformatted("Initialization has no pseudocode block.");
+					ImGui::PopStyleColor();
+				}
+				else {
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
+					for (int i = 0; i < lineCount; ++i) {
+						if ((i + 1) == highlightedLine) {
+							ImGui::TextColored(ImVec4(0.05f, 0.05f, 0.05f, 1.0f), "> %s", codeArray[i]);
+						}
+						else {
+							ImGui::TextUnformatted(codeArray[i]);
+						}
+					}
+					ImGui::PopStyleColor();
+				}
+			}
+		}
+		ImGui::End();
+		ImGui::PopStyleColor();
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(rightTabX, codeY), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(rightTabWidth, codeH), ImGuiCond_Always);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.98f, 0.78f, 0.08f, 0.96f));
+	if (ImGui::Begin("Source Code Toggle##SLLCodeToggle", nullptr,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoScrollbar)) {
+		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f);
+		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+			codePanelCollapsed_ = !codePanelCollapsed_;
+		}
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+
+	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 58.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f), ImGuiCond_Always);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, 0.98f));
+	if (ImGui::Begin("Playback##SLLBottomPlayback", nullptr,
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoScrollbar)) {
+		ImGui::PushItemWidth(140.0f);
+		ImGui::SliderFloat("##BottomPlaybackSpeed", &playbackSpeed_, 0.25f, 5.0f, "");
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		ImGui::Text("%.2gx", playbackSpeed_);
+
+		ImGui::SameLine(vpSize.x * 0.43f);
+		if (ImGui::Button("|<")) {
+			autoplay_ = false;
+			singlyLinkedList.jumpToStart();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("<")) {
+			autoplay_ = false;
+			playbackMode_ = PlaybackMode::StepByStep;
+			singlyLinkedList.stepBackward();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
+			autoplay_ = !autoplay_;
+			if (autoplay_) {
+				playbackMode_ = PlaybackMode::RunAtOnce;
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(">")) {
+			autoplay_ = false;
+			playbackMode_ = PlaybackMode::StepByStep;
+			singlyLinkedList.stepForward();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(">|")) {
+			autoplay_ = false;
+			singlyLinkedList.jumpToFinal();
+		}
+
+		if (!singlyLinkedList.timeline.empty()) {
+			int frameIndex = static_cast<int>(singlyLinkedList.cursor);
+			const int maxFrame = static_cast<int>(singlyLinkedList.timeline.size() - 1);
+			ImGui::SameLine(vpSize.x * 0.58f);
+			ImGui::PushItemWidth(vpSize.x * 0.36f);
+			if (ImGui::SliderInt("##BottomTimeline", &frameIndex, 0, maxFrame, "")) {
+				autoplay_ = false;
+				singlyLinkedList.cursor = static_cast<std::size_t>(std::clamp(frameIndex, 0, maxFrame));
+				singlyLinkedList.interpolation.isTransitioning = false;
+				singlyLinkedList.interpolation.transitionProgress = 0.0f;
+			}
+			ImGui::PopItemWidth();
+		}
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+
+	isEditingUserDefinedInput_ = userDefinedInputActiveThisFrame || wantsTextInput;
+	if (isEditingUserDefinedInput_) {
+		autoplay_ = false;
+	}
+	if (!isEditingUserDefinedInput_) {
+		singlyLinkedList.updateInterpolation(dt);
+		singlyLinkedList.updateAutoplay(dt, playbackSpeed_, autoplay_ && playbackMode_ == PlaybackMode::RunAtOnce);
+	}
 }
 
 void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
@@ -319,39 +831,75 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 	const sf::Vector2u size = window.getSize();
 	const sf::Font* font = getSllFont();
 
+	sf::Color styleNodeColor = nodeBaseColor_;
+	sf::Color styleActiveColor = activeNodeColor_;
+	sf::Color styleSecondaryColor = secondaryNodeColor_;
+	sf::Color styleDeleteColor = deleteNodeColor_;
+	sf::Color styleEdgeColor = edgeColor_;
+	float styleEdgeThickness = edgeThickness_;
+	float styleFontScale = fontScale_;
+
+	if (visualStylePreset_ == 1) {
+		styleNodeColor = sf::Color(245, 245, 245, 255);
+		styleSecondaryColor = sf::Color(210, 210, 210, 255);
+		styleEdgeThickness = std::max(1.5f, edgeThickness_ * 0.7f);
+		styleFontScale = std::max(0.8f, fontScale_ * 0.95f);
+	}
+	else if (visualStylePreset_ == 2) {
+		styleEdgeThickness = edgeThickness_ * 1.35f;
+		styleFontScale = fontScale_ * 1.05f;
+	}
+
 	sf::RectangleShape background(sf::Vector2f(static_cast<float>(size.x), static_cast<float>(size.y)));
-	background.setFillColor(sf::Color(16, 21, 30));
+	background.setFillColor(canvasBgColor_);
 	window.draw(background);
 
 	if (frame.values.empty()) {
 		return;
 	}
 
-	const float radius = std::clamp(nodeRadius_, 18.0f, 42.0f);
+	const sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+	const bool mouseInsideCanvas =
+		mousePos.x >= 0 && mousePos.y >= 0 &&
+		mousePos.x < static_cast<int>(size.x) &&
+		mousePos.y < static_cast<int>(size.y);
+	const bool canDragCanvas = mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
+
+	if (canDragCanvas) {
+		const float wheel = ImGui::GetIO().MouseWheel;
+		if (std::abs(wheel) > 0.001f) {
+			const float zoomStep = 1.0f + wheel * 0.12f;
+			zoomScale_ = std::clamp(zoomScale_ * zoomStep, 0.55f, 2.2f);
+		}
+	}
+
+	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
 	const float diameter = radius * 2.0f;
-	const float spacing = diameter + 50.0f;
-	const float viewportWidth = static_cast<float>(size.x) - 80.0f;
-	const float maxScroll = computeMaxScroll(frame, viewportWidth, nodeRadius_);
+	const float spacing = diameter + (50.0f * zoomScale_);
+	const bool isDragPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
 
-	const float minScroll = 0.0f;
-	const int activeIdx = frame.activeIndex;
-	if (interpolation.isTransitioning && interpolation.previousFrame.activeIndex >= 0 && activeIdx >= 0) {
-		const float prevX = 30.0f + static_cast<float>(interpolation.previousFrame.activeIndex) * spacing;
-		const float currX = 30.0f + static_cast<float>(activeIdx) * spacing;
-		const float smoothX = lerp(prevX, currX, interpolation.transitionProgress);
-		const float target = std::clamp(smoothX - viewportWidth * 0.5f, minScroll, maxScroll);
-		scrollOffset_ += (target - scrollOffset_) * 0.15f;
+	if (canDragCanvas && isDragPressed) {
+		if (!isCanvasDragging_) {
+			isCanvasDragging_ = true;
+			lastDragMousePos_ = mousePos;
+		}
+		else {
+			const int deltaX = mousePos.x - lastDragMousePos_.x;
+			const int deltaY = mousePos.y - lastDragMousePos_.y;
+			scrollOffset_ -= static_cast<float>(deltaX);
+			canvasOffsetY_ += static_cast<float>(deltaY);
+			lastDragMousePos_ = mousePos;
+		}
 	}
-	else if (activeIdx >= 0) {
-		const float nodeX = 30.0f + static_cast<float>(activeIdx) * spacing;
-		const float target = std::clamp(nodeX - viewportWidth * 0.5f, minScroll, maxScroll);
-		scrollOffset_ += (target - scrollOffset_) * 0.15f;
+	else {
+		isCanvasDragging_ = false;
 	}
 
-	scrollOffset_ = std::clamp(scrollOffset_, minScroll, maxScroll);
+	scrollOffset_ = std::clamp(scrollOffset_, -10000.0f, 10000.0f);
+	canvasOffsetY_ = std::clamp(canvasOffsetY_, -10000.0f, 10000.0f);
 
 	const float startX = 40.0f - scrollOffset_;
-	const float centerY = static_cast<float>(size.y) * 0.56f;
+	const float centerY = static_cast<float>(size.y) * 0.50f + canvasOffsetY_;
 
 	auto drawArrow = [&](float fromX, float fromY, float toX, float toY, sf::Color color) {
 		sf::Vertex line[2];
@@ -381,15 +929,15 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		sf::CircleShape node(radius);
 		node.setOrigin(sf::Vector2f(radius, radius));
 		node.setPosition(sf::Vector2f(cx, cy));
-		node.setOutlineThickness(edgeThickness_);
-		node.setOutlineColor(sf::Color(15, 23, 42, alpha));
+		node.setOutlineThickness(styleEdgeThickness);
+		node.setOutlineColor(sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, alpha));
 		node.setFillColor(sf::Color(fill.r, fill.g, fill.b, alpha));
 		window.draw(node);
 
 		if (font != nullptr) {
-			sf::Text valueText(*font, "", static_cast<unsigned int>(20.0f * fontScale_));
+			sf::Text valueText(*font, "", static_cast<unsigned int>(20.0f * styleFontScale));
 			valueText.setString(std::to_string(value));
-			valueText.setFillColor(sf::Color(255, 255, 255, alpha));
+			valueText.setFillColor(sf::Color(valueTextColor_.r, valueTextColor_.g, valueTextColor_.b, alpha));
 			const sf::FloatRect vb = valueText.getLocalBounds();
 			valueText.setPosition(sf::Vector2f(
 				cx - (vb.position.x + vb.size.x * 0.5f),
@@ -397,9 +945,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			));
 			window.draw(valueText);
 
-			sf::Text indexText(*font, "", static_cast<unsigned int>(14.0f * fontScale_));
+			sf::Text indexText(*font, "", static_cast<unsigned int>(14.0f * styleFontScale));
 			indexText.setString(std::to_string(index));
-			indexText.setFillColor(sf::Color(144, 202, 249, alpha));
+			indexText.setFillColor(sf::Color(indexTextColor_.r, indexTextColor_.g, indexTextColor_.b, alpha));
 			const sf::FloatRect ib = indexText.getLocalBounds();
 			indexText.setPosition(sf::Vector2f(
 				cx - (ib.position.x + ib.size.x * 0.5f),
@@ -437,7 +985,55 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		frame.operationType == SLLOperationType::Delete &&
 		interpolation.previousFrame.codeLine == 4 && frame.codeLine == 5;
 
-	if (addCreateTransition || addCreateStatic) {
+	const bool initializeTransition = interpolation.isTransitioning &&
+		interpolation.previousFrame.operationType == SLLOperationType::Initialize &&
+		frame.operationType == SLLOperationType::Initialize;
+
+	const bool initializeStatic = !interpolation.isTransitioning &&
+		frame.operationType == SLLOperationType::Initialize;
+
+	if (initializeTransition || initializeStatic) {
+		const float t = initializeTransition ? interpolation.transitionProgress : 1.0f;
+		const float smoothT = t * t * (3.0f - 2.0f * t);
+		const std::size_t nodeCount = frame.values.size();
+		const float revealSpan = 0.70f;
+		const float fadeWindow = 0.30f;
+		auto staggerDelay = [&](std::size_t idx) {
+			if (nodeCount <= 1) {
+				return 0.0f;
+			}
+			return revealSpan * (static_cast<float>(idx) / static_cast<float>(nodeCount - 1));
+		};
+
+		for (std::size_t i = 0; i < frame.values.size(); ++i) {
+			const float cx = startX + static_cast<float>(i) * spacing;
+			if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
+				continue;
+			}
+
+			const float nodeDelay = staggerDelay(i);
+			const float appear = std::clamp((smoothT - nodeDelay) / fadeWindow, 0.0f, 1.0f);
+			const float riseOffset = (1.0f - appear) * 26.0f;
+			const std::uint8_t alpha = static_cast<std::uint8_t>(255.0f * appear);
+			drawNode(cx, centerY + riseOffset, frame.values[i], static_cast<int>(i), styleNodeColor, alpha);
+		}
+
+		for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
+			const float x0 = startX + static_cast<float>(i) * spacing;
+			const float x1 = startX + static_cast<float>(i + 1) * spacing;
+			const float nodeDelay0 = staggerDelay(i);
+			const float nodeDelay1 = staggerDelay(i + 1);
+			const float appear0 = std::clamp((smoothT - nodeDelay0) / fadeWindow, 0.0f, 1.0f);
+			const float appear1 = std::clamp((smoothT - nodeDelay1) / fadeWindow, 0.0f, 1.0f);
+			const float edgeAppear = std::min(appear0, appear1);
+			if (edgeAppear <= 0.05f) {
+				continue;
+			}
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY,
+				sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * edgeAppear)));
+		}
+	}
+	else if (addCreateTransition || addCreateStatic) {
 		const int rawInsertSlot =
 			frame.secondaryIndex >= 0 ? frame.secondaryIndex :
 			(frame.activeIndex >= 0 ? frame.activeIndex + 1 : static_cast<int>(frame.values.size()));
@@ -472,9 +1068,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				continue;
 			}
 
-			sf::Color fill(72, 149, 239);
+			sf::Color fill = styleNodeColor;
 			if (static_cast<int>(i) == interpolation.previousFrame.activeIndex) {
-				fill = sf::Color(245, 158, 11);
+				fill = styleActiveColor;
 			}
 			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 		}
@@ -482,12 +1078,12 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
 			const float x0 = startX + static_cast<float>(i) * spacing;
 			const float x1 = startX + static_cast<float>(i + 1) * spacing;
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 		}
 
 		const float insertX = startX + static_cast<float>(insertSlot) * spacing;
 		const float insertY = centerY - 140.0f;
-		drawNode(insertX, insertY, insertedValue, insertSlot, sf::Color(245, 158, 11), static_cast<std::uint8_t>(255.0f * t));
+		drawNode(insertX, insertY, insertedValue, insertSlot, styleActiveColor, static_cast<std::uint8_t>(255.0f * t));
 	}
 	else if (addPrepareTransition || addPrepareStatic) {
 		const int insertedIndex = std::clamp(
@@ -505,9 +1101,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
 					continue;
 				}
-				sf::Color fill(72, 149, 239);
+				sf::Color fill = styleNodeColor;
 				if (i == frame.activeIndex) {
-					fill = sf::Color(245, 158, 11);
+					fill = styleActiveColor;
 				}
 				drawNode(cx, centerY, frame.values[i], i, fill);
 			}
@@ -515,17 +1111,17 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			for (int i = 0; i + 1 < insertedIndex; ++i) {
 				const float x0 = startX + static_cast<float>(i) * spacing;
 				const float x1 = startX + static_cast<float>(i + 1) * spacing;
-				drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+				drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 			}
 
 			const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
 			const float insertY = centerY - 120.0f;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, sf::Color(245, 158, 11));
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
 
 			if (insertedIndex > 0) {
 				const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
 				drawArrow(prevX + radius, centerY, insertX - radius, centerY,
-					sf::Color(148, 163, 184, static_cast<std::uint8_t>(255.0f * connectT)));
+					sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * connectT)));
 			}
 		}
 		else {
@@ -552,9 +1148,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				continue;
 			}
 
-			sf::Color fill(72, 149, 239);
+			sf::Color fill = styleNodeColor;
 			if (static_cast<int>(i) == frame.activeIndex) {
-				fill = sf::Color(245, 158, 11);
+				fill = styleActiveColor;
 			}
 			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 		}
@@ -565,17 +1161,17 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			}
 			const float x0 = addX(static_cast<int>(i));
 			const float x1 = addX(static_cast<int>(i + 1));
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 		}
 
 			const float insertX = addX(insertedIndex);
 			const float insertY = centerY - 135.0f;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, sf::Color(245, 158, 11));
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
 
 			if (insertedIndex > 0) {
 				const float prevX = addX(insertedIndex - 1);
 				drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY,
-					sf::Color(148, 163, 184, static_cast<std::uint8_t>(255.0f * connectT)));
+					sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * connectT)));
 			}
 		}
 	}
@@ -594,23 +1190,23 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
 					continue;
 				}
-				drawNode(cx, centerY, frame.values[i], i, sf::Color(72, 149, 239));
+				drawNode(cx, centerY, frame.values[i], i, styleNodeColor);
 			}
 
 			for (int i = 0; i + 1 < insertedIndex; ++i) {
 				const float x0 = startX + static_cast<float>(i) * spacing;
 				const float x1 = startX + static_cast<float>(i + 1) * spacing;
-				drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+				drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 			}
 
 			const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
 			const float startY = centerY - 120.0f;
 			const float insertY = startY + (centerY - startY) * smoothT;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, sf::Color(245, 158, 11));
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
 
 			if (insertedIndex > 0) {
 				const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
-				drawArrow(prevX + radius, centerY, insertX - radius, centerY, sf::Color(148, 163, 184));
+				drawArrow(prevX + radius, centerY, insertX - radius, centerY, styleEdgeColor);
 			}
 		}
 		else {
@@ -624,7 +1220,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				continue;
 			}
 
-			sf::Color fill(72, 149, 239);
+			sf::Color fill = styleNodeColor;
 			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 		}
 
@@ -634,27 +1230,27 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			}
 			const float x0 = startX + static_cast<float>(i) * spacing;
 			const float x1 = startX + static_cast<float>(i + 1) * spacing;
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 		}
 
 		const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
 		const float startY = centerY - (insertAtEnd ? 120.0f : 135.0f);
 		const float insertY = startY + (centerY - startY) * smoothT;
-		drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, sf::Color(245, 158, 11));
+		drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
 
 		if (insertedIndex > 0) {
 			const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
 			if (insertAtEnd) {
-				drawArrow(prevX + radius, centerY, insertX - radius, centerY, sf::Color(148, 163, 184));
+				drawArrow(prevX + radius, centerY, insertX - radius, centerY, styleEdgeColor);
 			}
 			else {
-				drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY, sf::Color(148, 163, 184));
+				drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY, styleEdgeColor);
 			}
 		}
 		if (insertedIndex + 1 < static_cast<int>(frame.values.size())) {
 			const float nextX = startX + static_cast<float>(insertedIndex + 1) * spacing;
 			drawArrow(insertX + radius * 0.6f, insertY, nextX - radius, centerY,
-				sf::Color(148, 163, 184, static_cast<std::uint8_t>(255.0f * t)));
+				sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * t)));
 		}
 		}
 	}
@@ -685,9 +1281,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				continue;
 			}
 
-			sf::Color fill(72, 149, 239);
+			sf::Color fill = styleNodeColor;
 			if (static_cast<int>(i) == deletedIndex) {
-				fill = sf::Color(239, 68, 68);
+				fill = styleDeleteColor;
 			}
 			drawNode(cx, cy, interpolation.previousFrame.values[i], static_cast<int>(i), fill, alpha);
 		}
@@ -704,7 +1300,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			if (static_cast<int>(i + 1) > deletedIndex) {
 				x1 -= spacing * shiftT;
 			}
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, sf::Color(148, 163, 184));
+			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 		}
 
 		if (deleteAtEnd && deletedIndex > 0) {
@@ -712,7 +1308,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			const float oldTailX = startX + static_cast<float>(deletedIndex) * spacing;
 			const float tailEndX = (oldTailX - radius) + ((prevX + radius) - (oldTailX - radius)) * reconnectT;
 			drawArrow(prevX + radius, centerY, tailEndX, centerY,
-				sf::Color(250, 204, 21, static_cast<std::uint8_t>(255.0f * (1.0f - std::clamp(t - 0.15f, 0.0f, 1.0f)))));
+				sf::Color(highlightRingColor_.r, highlightRingColor_.g, highlightRingColor_.b, static_cast<std::uint8_t>(255.0f * (1.0f - std::clamp(t - 0.15f, 0.0f, 1.0f)))));
 		}
 
 		if (deletedIndex > 0 && deletedIndex + 1 < static_cast<int>(interpolation.previousFrame.values.size())) {
@@ -720,7 +1316,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			const float rightBaseX = startX + static_cast<float>(deletedIndex + 1) * spacing;
 			const float rightX = rightBaseX - spacing * shiftT;
 			drawArrow(leftX + radius, centerY, rightX - radius, centerY,
-				sf::Color(250, 204, 21, static_cast<std::uint8_t>(255.0f * reconnectT)));
+				sf::Color(highlightRingColor_.r, highlightRingColor_.g, highlightRingColor_.b, static_cast<std::uint8_t>(255.0f * reconnectT)));
 		}
 	}
 	else {
@@ -730,18 +1326,18 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				continue;
 			}
 
-			sf::Color fill(72, 149, 239);
+			sf::Color fill = styleNodeColor;
 			if (static_cast<int>(i) == frame.secondaryIndex) {
-				fill = sf::Color(156, 163, 175);
+				fill = styleSecondaryColor;
 			}
 			if (static_cast<int>(i) == frame.activeIndex) {
-				fill = sf::Color(245, 158, 11);
+				fill = styleActiveColor;
 			}
 			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 
 			if (i + 1 < frame.values.size()) {
 				const float nx = startX + static_cast<float>(i + 1) * spacing;
-				drawArrow(cx + radius, centerY, nx - radius, centerY, sf::Color(148, 163, 184));
+				drawArrow(cx + radius, centerY, nx - radius, centerY, styleEdgeColor);
 			}
 		}
 	}
@@ -759,7 +1355,300 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		ring.setPosition(sf::Vector2f(markerX, centerY));
 		ring.setFillColor(sf::Color::Transparent);
 		ring.setOutlineThickness(3.0f);
-		ring.setOutlineColor(sf::Color(255, 214, 102, 230));
+		ring.setOutlineColor(highlightRingColor_);
 		window.draw(ring);
 	}
+
+}
+
+///-----------------------------------
+/// TIMELINE MANAGEMENT (Moved from logic)
+///-----------------------------------
+
+namespace {
+	constexpr float kBaseStepIntervalSeconds = 0.55f;
+
+	float pickTransitionDuration(const SLLFrame& from, const SLLFrame& to)
+	{
+		if (from.operationType == SLLOperationType::Add && to.operationType == SLLOperationType::Add) {
+			if (from.codeLine == 2 && to.codeLine == 3) {
+				return 0.90f; // Create new node above list
+			}
+			if (from.codeLine == 3 && to.codeLine == 4) {
+				return 1.05f; // Open gap and connect prev -> new
+			}
+			if (from.codeLine == 4 && to.codeLine == 5) {
+				return 0.95f; // Connect new -> next and settle
+			}
+		}
+
+		if (from.operationType == SLLOperationType::Initialize && to.operationType == SLLOperationType::Initialize) {
+			return 1.0f;
+		}
+
+		if (from.operationType == SLLOperationType::Delete && to.operationType == SLLOperationType::Delete &&
+			from.codeLine == 4 && to.codeLine == 5) {
+			return 0.95f;
+		}
+
+		return 0.45f;
+	}
+}
+
+void SinglyLinkedList::stepForward()
+{
+	if (timeline.empty()) {
+		return;
+	}
+	if (cursor + 1 < timeline.size()) {
+		interpolation.previousFrame = currentFrame();
+		++cursor;
+		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
+		interpolation.transitionProgress = 0.0f;
+		interpolation.isTransitioning = true;
+	}
+}
+
+void SinglyLinkedList::stepBackward()
+{
+	if (timeline.empty()) {
+		return;
+	}
+	if (cursor > 0) {
+		interpolation.previousFrame = currentFrame();
+		--cursor;
+		interpolation.currentFrame = timeline[cursor];
+		interpolation.transitionDuration = pickTransitionDuration(interpolation.previousFrame, interpolation.currentFrame);
+		interpolation.transitionProgress = 0.0f;
+		interpolation.isTransitioning = true;
+	}
+}
+
+void SinglyLinkedList::jumpToFinal()
+{
+	if (!timeline.empty()) {
+		cursor = timeline.size() - 1;
+		interpolation.isTransitioning = false;
+		interpolation.transitionProgress = 0.0f;
+	}
+}
+
+void SinglyLinkedList::jumpToStart()
+{
+	cursor = 0;
+	autoplayAccumulator = 0.0f;
+	interpolation.isTransitioning = false;
+	interpolation.transitionProgress = 0.0f;
+}
+
+void SinglyLinkedList::updateAutoplay(float deltaSeconds, float speedMultiplier, bool enabled)
+{
+	if (!enabled || timeline.empty() || cursor + 1 >= timeline.size()) {
+		autoplayAccumulator = 0.0f;
+		return;
+	}
+	if (interpolation.isTransitioning) {
+		return;
+	}
+
+	const float safeSpeed = std::max(0.1f, speedMultiplier);
+	const float stepInterval = kBaseStepIntervalSeconds / safeSpeed;
+	autoplayAccumulator += deltaSeconds;
+
+	if (autoplayAccumulator >= stepInterval && cursor + 1 < timeline.size()) {
+		autoplayAccumulator -= stepInterval;
+		stepForward();
+	}
+}
+
+const SLLFrame& SinglyLinkedList::currentFrame() const
+{
+	static const SLLFrame kEmptyFrame{};
+	if (timeline.empty()) {
+		return kEmptyFrame;
+	}
+	if (cursor >= timeline.size()) {
+		return timeline.back();
+	}
+	return timeline[cursor];
+}
+
+void SinglyLinkedList::updateInterpolation(float deltaSeconds)
+{
+	if (!interpolation.isTransitioning) {
+		return;
+	}
+
+	interpolation.transitionProgress += deltaSeconds / interpolation.transitionDuration;
+	if (interpolation.transitionProgress >= 1.0f) {
+		interpolation.transitionProgress = 1.0f;
+		interpolation.isTransitioning = false;
+	}
+}
+
+const SLLFrame& SinglyLinkedList::getInterpolatedFrame() const
+{
+	if (!interpolation.isTransitioning) {
+		return currentFrame();
+	}
+	return interpolation.currentFrame;
+}
+
+bool SinglyLinkedList::hasTimeline() const
+{
+	return !timeline.empty();
+}
+
+void SinglyLinkedList::rebuildIdleTimeline(const std::string& message, int codeLine)
+{
+	timeline.clear();
+	pushFrame(-1, -1, codeLine, message, SLLOperationType::Initialize);
+	commitTimeline(message);
+	if (!timeline.empty()) {
+		interpolation.previousFrame = timeline.front();
+		interpolation.currentFrame = timeline.front();
+	}
+	interpolation.isTransitioning = false;
+	interpolation.transitionProgress = 0.0f;
+}
+
+void SinglyLinkedList::pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType)
+{
+	SLLFrame frame;
+	frame.values = values;
+	frame.activeIndex = activeIndex;
+	frame.secondaryIndex = secondaryIndex;
+	frame.codeLine = codeLine;
+	frame.message = message;
+	frame.operationType = opType;
+	timeline.push_back(std::move(frame));
+}
+
+void SinglyLinkedList::commitTimeline(const std::string& fallbackMessage)
+{
+	if (timeline.empty()) {
+		pushFrame(-1, -1, -1, fallbackMessage, SLLOperationType::Initialize);
+	}
+	cursor = 0;
+	autoplayAccumulator = 0.0f;
+	lastMessage = timeline.back().message.empty() ? fallbackMessage : timeline.back().message;
+}
+
+///-----------------------------------
+/// VISUALIZATION WRAPPERS
+/// These build timestep-by-step animations before executing operations
+///-----------------------------------
+
+void SinglyLinkedList::addAtViz(std::size_t index, int value)
+{
+	if (index > values.size()) {
+		lastMessage = "Add failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, static_cast<int>(index), 1, "Start add operation", SLLOperationType::Add);
+
+	for (std::size_t i = 0; i < index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to insertion position", SLLOperationType::Add);
+	}
+	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
+		"Create new node with value", SLLOperationType::Add);
+
+	addAt(index, value);
+
+	if (index == 0) {
+		pushFrame(0, 0, 4,
+			"Set head to new node", SLLOperationType::Add);
+	}
+	else {
+		pushFrame(static_cast<int>(index - 1), static_cast<int>(index), 4,
+			"Set prev->next to new node", SLLOperationType::Add);
+	}
+
+	pushFrame(static_cast<int>(index),
+		(index + 1 < values.size()) ? static_cast<int>(index + 1) : -1,
+		5,
+		"Set new node next pointer", SLLOperationType::Add);
+	commitTimeline("Add complete");
+}
+
+void SinglyLinkedList::deleteAtViz(std::size_t index)
+{
+	if (values.empty()) {
+		lastMessage = "Delete failed: list is empty";
+		rebuildIdleTimeline(lastMessage, 1);
+		return;
+	}
+	if (index >= values.size()) {
+		lastMessage = "Delete failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start delete operation", SLLOperationType::Delete);
+
+	for (std::size_t i = 0; i <= index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Delete);
+	}
+	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
+		"Target node selected", SLLOperationType::Delete);
+
+	int nextIndexBeforeErase = (index + 1 < values.size()) ? static_cast<int>(index + 1) : -1;
+	pushFrame(static_cast<int>(index), nextIndexBeforeErase, 4,
+		"Remove target node", SLLOperationType::Delete);
+
+	deleteAt(index);
+	
+	int prevIndexAfterErase = (index == 0) ? -1 : static_cast<int>(index - 1);
+	int nextIndexAfterErase = (index < values.size()) ? static_cast<int>(index) : -1;
+	if (index == 0) {
+		pushFrame(nextIndexAfterErase, -1, 5, "Move head to next node", SLLOperationType::Delete);
+	}
+	else {
+		pushFrame(prevIndexAfterErase, nextIndexAfterErase, 5,
+			"Set prev->next to node after deleted", SLLOperationType::Delete);
+	}
+	commitTimeline("Delete complete");
+}
+
+void SinglyLinkedList::updateAtViz(std::size_t index, int value)
+{
+	if (index >= values.size()) {
+		lastMessage = "Update failed: index out of range";
+		rebuildIdleTimeline(lastMessage, 2);
+		return;
+	}
+
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start update operation", SLLOperationType::Update);
+
+	for (std::size_t i = 0; i <= index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Update);
+	}
+
+	updateAt(index, value);
+	pushFrame(static_cast<int>(index), -1, 3, "Updated node value", SLLOperationType::Update);
+	commitTimeline("Update complete");
+}
+
+void SinglyLinkedList::searchValueViz(int value)
+{
+	timeline.clear();
+	pushFrame(-1, -1, 1, "Start search operation", SLLOperationType::Search);
+
+	for (std::size_t i = 0; i < values.size(); ++i) {
+		if (values[i] == value) {
+			pushFrame(static_cast<int>(i), -1, 3, "Value found", SLLOperationType::Search);
+			commitTimeline("Search complete: found");
+			return;
+		}
+		pushFrame(static_cast<int>(i), -1, 2, "Compare current node", SLLOperationType::Search);
+	}
+
+	pushFrame(-1, -1, 4, "Value not found", SLLOperationType::Search);
+	commitTimeline("Search complete: not found");
 }

@@ -13,6 +13,11 @@ void HeapUI::draw() {
 		return;
 	}
 
+	if (ImGui::Button("DATA STRUCTURES", ImVec2(170.0f, 0.0f))) {
+		uiConfig.state = UIState::Menu;
+	}
+	ImGui::Separator();
+
 	ImGui::TextUnformatted("Heap module foundation is ready.");
 	ImGui::Separator();
 	ImGui::SeparatorText("Style");

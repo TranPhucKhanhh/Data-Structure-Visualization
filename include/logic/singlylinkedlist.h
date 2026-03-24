@@ -4,6 +4,7 @@
 #include <vector>
 
 enum class SLLOperationType {
+	Initialize,
 	Add,
 	Delete,
 	Update,
@@ -39,8 +40,9 @@ struct SinglyLinkedList {
 	// Initialization
 	void initializeEmpty();
 	void initializeRandom(int count, int minValue, int maxValue);
+	void initializeRandomSorted(int count, int minValue, int maxValue);
 	bool initializeFromTextFile(const std::string& path);
-	bool initializeFromJsonFile(const std::string& path);
+	void initializeFromValues(const std::vector<int>& newValues, const std::string& sourceMessage = "Initialized from user defined list");
 
 	// Operations
 	bool addAt(std::size_t index, int value);
@@ -66,6 +68,12 @@ struct SinglyLinkedList {
 	void pushFrame(int activeIndex, int secondaryIndex, int codeLine, const std::string& message, SLLOperationType opType = SLLOperationType::Add);
 	void commitTimeline(const std::string& fallbackMessage);
 	std::vector<int> parseIntegers(const std::string& content);
+
+	// Visualization wrappers (build timeline before executing operation)
+	void addAtViz(std::size_t index, int value);
+	void deleteAtViz(std::size_t index);
+	void updateAtViz(std::size_t index, int value);
+	void searchValueViz(int value);
 };
 
 inline SinglyLinkedList singlyLinkedList;
