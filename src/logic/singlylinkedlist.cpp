@@ -64,6 +64,30 @@ void SinglyLinkedList::initializeRandom(int count, int minValue, int maxValue)
 	}
 }
 
+void SinglyLinkedList::initializeRandomSorted(int count, int minValue, int maxValue)
+{
+	if (count < 0) {
+		count = 0;
+	}
+	if (minValue > maxValue) {
+		std::swap(minValue, maxValue);
+	}
+
+	std::mt19937 rng(std::random_device{}());
+	std::uniform_int_distribution<int> dist(minValue, maxValue);
+
+	std::vector<int> sortedValues;
+	sortedValues.reserve(static_cast<std::size_t>(count));
+	for (int i = 0; i < count; ++i) {
+		sortedValues.push_back(dist(rng));
+	}
+	std::sort(sortedValues.begin(), sortedValues.end());
+
+	std::ostringstream oss;
+	oss << "Initialized random sorted list with " << count << " nodes";
+	initializeFromValues(sortedValues, oss.str());
+}
+
 bool SinglyLinkedList::initializeFromTextFile(const std::string& path)
 {
 	std::ifstream file(path);
@@ -75,11 +99,18 @@ bool SinglyLinkedList::initializeFromTextFile(const std::string& path)
 
 	std::ostringstream buffer;
 	buffer << file.rdbuf();
-	values = parseIntegers(buffer.str());
+	const std::vector<int> parsed = parseIntegers(buffer.str());
+	initializeFromValues(parsed, "Initialized from text file");
+	return true;
+}
+
+void SinglyLinkedList::initializeFromValues(const std::vector<int>& newValues, const std::string& sourceMessage)
+{
+	values = newValues;
 	timeline.clear();
 	pushFrame(-1, -1, 1, "Preparing nodes", SLLOperationType::Initialize);
-	pushFrame(-1, -1, 1, "Initialized from text file", SLLOperationType::Initialize);
-	commitTimeline("Initialized from text file");
+	pushFrame(-1, -1, 1, sourceMessage, SLLOperationType::Initialize);
+	commitTimeline(sourceMessage);
 	if (timeline.size() > 1) {
 		cursor = 1;
 		interpolation.previousFrame = timeline[0];
@@ -88,7 +119,6 @@ bool SinglyLinkedList::initializeFromTextFile(const std::string& path)
 		interpolation.transitionProgress = 0.0f;
 		interpolation.isTransitioning = true;
 	}
-	return true;
 }
 
 ///-----------------------------------

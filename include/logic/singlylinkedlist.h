@@ -40,7 +40,9 @@ struct SinglyLinkedList {
 	// Initialization
 	void initializeEmpty();
 	void initializeRandom(int count, int minValue, int maxValue);
+	void initializeRandomSorted(int count, int minValue, int maxValue);
 	bool initializeFromTextFile(const std::string& path);
+	void initializeFromValues(const std::vector<int>& newValues, const std::string& sourceMessage = "Initialized from user defined list");
 
 	// Operations
 	bool addAt(std::size_t index, int value);
