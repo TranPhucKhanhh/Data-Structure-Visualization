@@ -16,7 +16,7 @@ Trie::~Trie()
 
 //Helper function to clear the trie
 
-void Trie::_clear(TrieNode *&root_node)
+void Trie::_clear(TrieNode*& root_node)
 {
     if (root_node == nullptr) return;
 
@@ -35,7 +35,7 @@ void Trie::_clear(TrieNode *&root_node)
 void Trie::initFromKeyboard()
 {
     int _num_words;
-//    std::cout << "Enter the number of words: ";
+    //    std::cout << "Enter the number of words: ";
     std::cin >> _num_words;
     for (int _i = 0; _i < _num_words; ++_i)
     {
@@ -46,28 +46,28 @@ void Trie::initFromKeyboard()
     }
 }
 
-void Trie::initFromList(std::vector<std::string> &word_list)
+void Trie::initFromList(std::vector<std::string>& word_list)
 {
-    for (const std::string &_word: word_list) insertWord(_word);
+    for (const std::string& _word : word_list) insertWord(_word);
 }
 
-void Trie::initFromFile(std::string file_path)
+void Trie::initFromFile(const std::string& file_path)
 {
     // Implement later
 }
 
 // Step by step initialization
-std::vector<TrieInstruction> Trie::initFromListStep(std::vector<std::string> &word_list)
+std::vector<TrieInstruction> Trie::initFromListStep(std::vector<std::string>& word_list)
 {
     std::vector<TrieInstruction> _steps;
     for (const std::string& _word : word_list) {
-		std::vector<TrieInstruction> _step_for_word = insertWordStep(_word);
-		_steps.insert(_steps.end(), _step_for_word.begin(), _step_for_word.end());
+        std::vector<TrieInstruction> _step_for_word = insertWordStep(_word);
+        _steps.insert(_steps.end(), _step_for_word.begin(), _step_for_word.end());
     }
     return _steps;
 }
 
-std::vector<TrieInstruction> Trie::initFromFileStep(std::string file_path)
+std::vector<TrieInstruction> Trie::initFromFileStep(const std::string& file_path)
 {
     // Implement later
     return {};
@@ -82,9 +82,9 @@ std::vector<TrieInstruction> Trie::initFromFileStep(std::string file_path)
 //DAAT insertion
 void Trie::insertWord(const std::string& word)
 {
-    TrieNode *_current_node = root_node;
+    TrieNode* _current_node = root_node;
 
-    for (char _c: word)
+    for (char _c : word)
     {
         int _idx = _c - 'a';
         if (_current_node->children[_idx] == nullptr)
@@ -103,9 +103,9 @@ void Trie::insertWord(const std::string& word)
 std::vector<TrieInstruction> Trie::insertWordStep(const std::string& word)
 {
     std::vector<TrieInstruction> _steps;
-    TrieNode *_current_node = root_node;
+    TrieNode* _current_node = root_node;
 
-    for (char _c: word)
+    for (char _c : word)
     {
         int _idx = _c - 'a';
         if (_current_node->children[_idx] == nullptr)
@@ -131,9 +131,9 @@ std::vector<TrieInstruction> Trie::insertWordStep(const std::string& word)
 //DAAT search
 bool Trie::searchWord(const std::string& word)
 {
-    TrieNode *_current_node = root_node;
+    TrieNode* _current_node = root_node;
 
-    for (char _c: word)
+    for (char _c : word)
     {
         int _idx = _c - 'a';
         if (_current_node->children[_idx] == nullptr)
@@ -151,9 +151,9 @@ bool Trie::searchWord(const std::string& word)
 std::vector<TrieInstruction> Trie::searchWordStep(const std::string& word)
 {
     std::vector<TrieInstruction> _steps;
-    TrieNode *_current_node = root_node;
+    TrieNode* _current_node = root_node;
 
-    for (char _c: word)
+    for (char _c : word)
     {
         int _idx = _c - 'a';
         if (_current_node->children[_idx] == nullptr)
@@ -183,7 +183,7 @@ void Trie::deleteWord(const std::string& word)
     _deleteHelper(root_node, word, 0);
 }
 
-bool Trie::_isEmpty(TrieNode *_node)
+bool Trie::_isEmpty(TrieNode* _node)
 {
     for (int _i = 0; _i < 26; ++_i)
     {
@@ -198,7 +198,7 @@ Case 2: The path does not exist
 Case 3: The path does exist -> traverse down
 */
 
-bool Trie::_deleteHelper(TrieNode *_current, std::string _word, int _index)
+bool Trie::_deleteHelper(TrieNode* _current, std::string _word, int _index)
 {
     if (_index == _word.size())
     {
@@ -242,14 +242,14 @@ std::vector<TrieInstruction> Trie::deleteWordStep(const std::string& word)
     return _steps;
 }
 
-bool Trie::_deleteHelperStep(TrieNode *_current, std::string _word, int _index, std::vector<TrieInstruction> &_steps)
+bool Trie::_deleteHelperStep(TrieNode* _current, std::string _word, int _index, std::vector<TrieInstruction>& _steps)
 {
     if (_index == _word.size())
     {
         if (_current->is_end_of_word)
         {
             _current->is_end_of_word = false;
-            _steps.push_back(TrieInstruction(TrieOp::UNMARK_END));  
+            _steps.push_back(TrieInstruction(TrieOp::UNMARK_END));
         }
         else {
             _steps.push_back(TrieInstruction(TrieOp::NOT_FOUND));

@@ -11,16 +11,6 @@
 namespace {
 	void drawActiveScreen(sf::RenderWindow& window)
 	{
-		while ( const std::optional event = window.pollEvent() )
-		{
-			if ( event->is<sf::Event::Closed>() )
-				window.close();
-
-			
-		}
-
-		window.clear();
-
 		// Draw the current UI state depend on the UI view state
 		if (uiConfig.state == UIState::Menu) {
 			menu_ui.draw();
@@ -37,7 +27,7 @@ namespace {
 		}
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
 			singly_linked_list_ui.draw();
-			//singly_linked_list_ui.drawSfml(window);
+			singly_linked_list_ui.drawSfml(window);
 		}
 	}
 }

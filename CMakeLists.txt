@@ -71,4 +71,6 @@ target_link_libraries(DataVisualization
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DataVisualization)
 
-target_compile_options(DataVisualization PRIVATE /FS)
+target_compile_options(DataVisualization PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/FS>
+)
