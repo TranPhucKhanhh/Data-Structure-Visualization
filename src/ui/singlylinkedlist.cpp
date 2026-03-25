@@ -740,7 +740,13 @@ void SinglyLinkedListUI::draw() {
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
 					for (int i = 0; i < lineCount; ++i) {
 						if ((i + 1) == highlightedLine) {
-							ImGui::TextColored(ImVec4(0.05f, 0.05f, 0.05f, 1.0f), "> %s", codeArray[i]);
+							const ImVec2 textPos = ImGui::GetCursorScreenPos();
+							ImGui::TextColored(ImVec4(0.82f, 0.12f, 0.08f, 1.0f), "> %s", codeArray[i]);
+							std::string boldLine = std::string("> ") + codeArray[i];
+							ImGui::GetWindowDrawList()->AddText(
+								ImVec2(textPos.x + 0.8f, textPos.y),
+								IM_COL32(209, 30, 20, 255),
+								boldLine.c_str());
 						}
 						else {
 							ImGui::TextUnformatted(codeArray[i]);
