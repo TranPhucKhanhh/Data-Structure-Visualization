@@ -10,13 +10,21 @@
 #include <cctype>
 #include <cmath>
 #include <filesystem>
+#include <random>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace {
     float lerp(float a, float b, float t) {
         return a + (b - a) * t;
+    }
+
+    float easeInOut(float t) {
+        t = std::clamp(t, 0.0f, 1.0f);
+        return t * t * (3.0f - 2.0f * t);
     }
 
     const sf::Font* getTrieFont() {
@@ -64,6 +72,30 @@ namespace {
                 words.push_back(clean);
             }
         }
+        return words;
+    }
+
+    std::vector<std::string> generateRandomWords(int count, int minLength, int maxLength) {
+        std::vector<std::string> words;
+        count = std::max(0, count);
+        minLength = std::max(1, minLength);
+        maxLength = std::max(minLength, maxLength);
+
+        std::mt19937 rng(std::random_device{}());
+        std::uniform_int_distribution<int> lenDist(minLength, maxLength);
+        std::uniform_int_distribution<int> charDist(0, 25);
+
+        words.reserve(static_cast<std::size_t>(count));
+        for (int i = 0; i < count; ++i) {
+            const int len = lenDist(rng);
+            std::string word;
+            word.reserve(static_cast<std::size_t>(len));
+            for (int j = 0; j < len; ++j) {
+                word.push_back(static_cast<char>('a' + charDist(rng)));
+            }
+            words.push_back(std::move(word));
+        }
+
         return words;
     }
 
@@ -204,9 +236,145 @@ namespace {
             break;
         }
     }
+
+    void clearTrieNode(TrieNode*& node) {
+        if (node == nullptr) {
+            return;
+        }
+        for (TrieNode*& child : node->children) {
+            clearTrieNode(child);
+        }
+        delete node;
+        node = nullptr;
+    }
+
+    TrieNode* cloneTrieNode(const TrieNode* source) {
+        if (source == nullptr) {
+            return nullptr;
+        }
+        TrieNode* node = new TrieNode();
+        node->is_end_of_word = source->is_end_of_word;
+        for (int i = 0; i < 26; ++i) {
+            node->children[i] = cloneTrieNode(source->children[i]);
+        }
+        return node;
+    }
+
+    void applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruction>& steps, int appliedCount) {
+        if (root == nullptr) {
+            return;
+        }
+
+        TrieNode* current = root;
+        std::string path;
+        const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
+
+        for (int i = 0; i < count; ++i) {
+            const TrieInstruction& step = steps[i];
+            switch (step.trie_op) {
+            case TrieOp::MOVE_TO_NODE:
+            case TrieOp::CREATE_NODE: {
+                if (step.character < 'a' || step.character > 'z') {
+                    continue;
+                }
+                const int idx = step.character - 'a';
+                if (step.trie_op == TrieOp::CREATE_NODE && current->children[idx] == nullptr) {
+                    current->children[idx] = new TrieNode();
+                }
+
+                if (current->children[idx] != nullptr) {
+                    current = current->children[idx];
+                    path.push_back(step.character);
+                }
+                else if (root->children[idx] != nullptr) {
+                    current = root->children[idx];
+                    path.clear();
+                    path.push_back(step.character);
+                }
+                break;
+            }
+            case TrieOp::MARK_END:
+                current->is_end_of_word = true;
+                current = root;
+                path.clear();
+                break;
+            case TrieOp::UNMARK_END:
+                current->is_end_of_word = false;
+                break;
+            case TrieOp::DELETE_PHYSICAL:
+                if (!path.empty()) {
+                    const char erased = path.back();
+                    path.pop_back();
+
+                    TrieNode* parent = root;
+                    bool validParent = true;
+                    for (char c : path) {
+                        const int idx = c - 'a';
+                        if (idx < 0 || idx >= 26 || parent->children[idx] == nullptr) {
+                            validParent = false;
+                            break;
+                        }
+                        parent = parent->children[idx];
+                    }
+
+                    if (validParent) {
+                        const int erasedIdx = erased - 'a';
+                        if (erasedIdx >= 0 && erasedIdx < 26 && parent->children[erasedIdx] != nullptr) {
+                            clearTrieNode(parent->children[erasedIdx]);
+                            parent->children[erasedIdx] = nullptr;
+                        }
+                        current = parent;
+                    }
+                }
+                break;
+            case TrieOp::FOUND_WORD:
+            case TrieOp::NOT_FOUND:
+                current = root;
+                path.clear();
+                break;
+            }
+        }
+    }
 }
 
 TrieUI::TrieUI() {}
+
+TrieUI::~TrieUI() {
+    clearTrieNode(animationBaseRoot_);
+    hasAnimationBase_ = false;
+}
+
+void TrieUI::startStepTransition(int targetStep) {
+    const int clampedTarget = std::clamp(targetStep, 0, static_cast<int>(currentSteps_.size()));
+    if (clampedTarget == currentStepIndex_) {
+        stepTransitioning_ = false;
+        stepTransitionProgress_ = 1.0f;
+        transitionFromStep_ = currentStepIndex_;
+        transitionToStep_ = currentStepIndex_;
+        return;
+    }
+
+    transitionFromStep_ = currentStepIndex_;
+    transitionToStep_ = clampedTarget;
+    stepTransitionProgress_ = 0.0f;
+    stepTransitioning_ = true;
+}
+
+std::string TrieUI::buildActivePath(int appliedCount) const {
+    std::string activePath;
+    const int count = std::clamp(appliedCount, 0, static_cast<int>(currentSteps_.size()));
+    for (int i = 0; i < count; ++i) {
+        const TrieInstruction& step = currentSteps_[i];
+        if ((step.trie_op == TrieOp::MOVE_TO_NODE || step.trie_op == TrieOp::CREATE_NODE) && step.character >= 'a' && step.character <= 'z') {
+            activePath.push_back(step.character);
+        }
+        else if (step.trie_op == TrieOp::MARK_END || step.trie_op == TrieOp::FOUND_WORD || step.trie_op == TrieOp::NOT_FOUND) {
+            // A word-level operation is finished; start tracking the next word from root.
+            activePath.clear();
+        }
+    }
+    return activePath;
+}
 
 void TrieUI::draw() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -266,10 +434,27 @@ void TrieUI::draw() {
     auto startTimeline = [&](std::vector<TrieInstruction>&& steps, int sourceMenuIndex, const std::string& fallbackMessage) {
         currentSteps_ = std::move(steps);
         currentStepIndex_ = 0;
+        transitionFromStep_ = 0;
+        transitionToStep_ = 0;
+        stepTransitioning_ = false;
+        stepTransitionProgress_ = 1.0f;
         lastOperationMenuIndex_ = sourceMenuIndex;
         autoplayAccumulator_ = 0.0f;
         operationResult_ = fallbackMessage;
-        autoplay_ = false;
+        autoplay_ = true;
+        playbackMode_ = TriePlaybackMode::RunAtOnce;
+    };
+
+    auto captureAnimationBase = [&]() {
+        clearTrieNode(animationBaseRoot_);
+        animationBaseRoot_ = cloneTrieNode(trie.getRoot());
+        hasAnimationBase_ = (animationBaseRoot_ != nullptr);
+    };
+
+    auto captureEmptyAnimationBase = [&]() {
+        clearTrieNode(animationBaseRoot_);
+        animationBaseRoot_ = new TrieNode();
+        hasAnimationBase_ = true;
     };
 
     const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
@@ -345,24 +530,96 @@ void TrieUI::draw() {
                 ImGui::PushFont(menuCardDescFont);
             }
             if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
-                ImGui::TextUnformatted("A =");
+                randomWordCount_ = std::max(1, randomWordCount_);
+                randomMinLength_ = std::max(1, randomMinLength_);
+                randomMaxLength_ = std::max(randomMinLength_, randomMaxLength_);
+
+                ImGui::TextUnformatted("Initialize Trie");
+
+                if (ImGui::Button("Empty", ImVec2(90.0f, 0.0f))) {
+                    captureEmptyAnimationBase();
+                    trie.clear();
+                    startTimeline({}, 0, "Initialized empty trie");
+                }
                 ImGui::SameLine();
-                ImGui::PushItemWidth(360.0f);
+                if (ImGui::Button("Random", ImVec2(90.0f, 0.0f))) {
+                    std::vector<std::string> words = generateRandomWords(randomWordCount_, randomMinLength_, randomMaxLength_);
+                    if (words.empty()) {
+                        operationResult_ = "Random initialize failed";
+                    }
+                    else {
+                        captureEmptyAnimationBase();
+                        std::vector<TrieInstruction> steps = trie.initFromListStep(words);
+                        startTimeline(std::move(steps), 0, "Initialized from random words");
+                    }
+                }
+
+                ImGui::Spacing();
+                ImGui::TextUnformatted("Random settings");
+
+                ImGui::TextUnformatted("N =");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(90.0f);
+                ImGui::InputInt("##TrieRandomCount", &randomWordCount_);
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::TextUnformatted("Min Len =");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(90.0f);
+                ImGui::InputInt("##TrieRandomMinLen", &randomMinLength_);
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::TextUnformatted("Max Len =");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(90.0f);
+                ImGui::InputInt("##TrieRandomMaxLen", &randomMaxLength_);
+                ImGui::PopItemWidth();
+
+                ImGui::Spacing();
+                ImGui::TextUnformatted("Custom words (comma-separated)");
+                const float createRowButtonW = 72.0f;
+                const float createRowInputW = std::max(180.0f, ImGui::GetContentRegionAvail().x - createRowButtonW - 8.0f);
+                ImGui::PushItemWidth(createRowInputW);
                 ImGui::InputText("##TrieCreateWords", createWords_.data(), createWords_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Go", ImVec2(56.0f, 0.0f))) {
+                if (ImGui::Button("Go", ImVec2(createRowButtonW, 0.0f))) {
                     std::vector<std::string> words = parseWordList(createWords_.data());
                     if (words.empty()) {
                         operationResult_ = "Create failed: enter comma-separated words (letters only)";
                     }
                     else {
+                        captureEmptyAnimationBase();
                         std::vector<TrieInstruction> steps = trie.initFromListStep(words);
                         startTimeline(std::move(steps), 0, "Create from word list");
                     }
                 }
+
                 ImGui::Spacing();
-                ImGui::TextUnformatted("Example: apple, app, apt, bat");
+                ImGui::TextUnformatted("Load from .txt");
+                const float loadButtonW = 100.0f;
+                const float loadInputW = std::max(180.0f, ImGui::GetContentRegionAvail().x - loadButtonW - 8.0f);
+                ImGui::PushItemWidth(loadInputW);
+                ImGui::InputText("##TrieLoadTxt", txtPath_.data(), txtPath_.size());
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                if (ImGui::Button("Load txt", ImVec2(loadButtonW, 0.0f))) {
+                    const std::filesystem::path filePath(txtPath_.data());
+                    if (txtPath_[0] == '\0' || !std::filesystem::exists(filePath)) {
+                        operationResult_ = "Load failed: file not found";
+                    }
+                    else {
+                        captureEmptyAnimationBase();
+                        std::vector<TrieInstruction> steps = trie.initFromFileStep(txtPath_.data());
+                        if (steps.empty()) {
+                            operationResult_ = "Load failed: no valid words in file";
+                        }
+                        else {
+                            startTimeline(std::move(steps), 0, "Initialized from text file");
+                        }
+                    }
+                }
+                ImGui::Spacing();
             }
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
                 ImGui::TextUnformatted("Word:");
@@ -377,6 +634,7 @@ void TrieUI::draw() {
                         operationResult_ = "Search failed: enter a valid word";
                     }
                     else {
+                        captureAnimationBase();
                         std::vector<TrieInstruction> steps = trie.searchWordStep(word);
                         const bool found = !steps.empty() && steps.back().trie_op == TrieOp::FOUND_WORD;
                         startTimeline(std::move(steps), 1, found ? "Found" : "Not Found");
@@ -396,6 +654,7 @@ void TrieUI::draw() {
                         operationResult_ = "Insert failed: enter a valid word";
                     }
                     else {
+                        captureAnimationBase();
                         std::vector<TrieInstruction> steps = trie.insertWordStep(word);
                         startTimeline(std::move(steps), 2, "Inserted");
                     }
@@ -414,6 +673,7 @@ void TrieUI::draw() {
                         operationResult_ = "Remove failed: enter a valid word";
                     }
                     else {
+                        captureAnimationBase();
                         std::vector<TrieInstruction> steps = trie.deleteWordStep(word);
                         startTimeline(std::move(steps), 3, "Remove operation" );
                     }
@@ -439,6 +699,7 @@ void TrieUI::draw() {
                         operationResult_ = "Update failed: old/new words must be valid";
                     }
                     else {
+                        captureAnimationBase();
                         std::vector<TrieInstruction> steps = trie.updateWordStep(oldWord, newWord);
                         startTimeline(std::move(steps), 4, "Update operation");
                     }
@@ -477,16 +738,15 @@ void TrieUI::draw() {
         ImGui::PopStyleColor();
     }
 
-    if (currentStepIndex_ < 0) {
-        currentStepIndex_ = 0;
+    int displayStepIndex = currentStepIndex_;
+    if (stepTransitioning_ && stepTransitionProgress_ > 0.5f) {
+        displayStepIndex = transitionToStep_;
     }
-    if (currentStepIndex_ > static_cast<int>(currentSteps_.size())) {
-        currentStepIndex_ = static_cast<int>(currentSteps_.size());
-    }
+    displayStepIndex = std::clamp(displayStepIndex, 0, static_cast<int>(currentSteps_.size()));
 
     const TrieInstruction* activeInstruction = nullptr;
-    if (!currentSteps_.empty() && currentStepIndex_ > 0) {
-        activeInstruction = &currentSteps_[currentStepIndex_ - 1];
+    if (!currentSteps_.empty() && displayStepIndex > 0) {
+        activeInstruction = &currentSteps_[displayStepIndex - 1];
     }
     const std::string currentComment = (activeInstruction != nullptr)
         ? instructionToComment(activeInstruction)
@@ -621,12 +881,14 @@ void TrieUI::draw() {
             autoplay_ = false;
             currentStepIndex_ = 0;
             autoplayAccumulator_ = 0.0f;
+            stepTransitioning_ = false;
+            stepTransitionProgress_ = 1.0f;
         }
         ImGui::SameLine();
         if (ImGui::Button("<")) {
             autoplay_ = false;
             playbackMode_ = TriePlaybackMode::StepByStep;
-            currentStepIndex_ = std::max(0, currentStepIndex_ - 1);
+            startStepTransition(currentStepIndex_ - 1);
         }
         ImGui::SameLine();
         if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
@@ -639,12 +901,14 @@ void TrieUI::draw() {
         if (ImGui::Button(">")) {
             autoplay_ = false;
             playbackMode_ = TriePlaybackMode::StepByStep;
-            currentStepIndex_ = std::min(static_cast<int>(currentSteps_.size()), currentStepIndex_ + 1);
+            startStepTransition(currentStepIndex_ + 1);
         }
         ImGui::SameLine();
         if (ImGui::Button(">|")) {
             autoplay_ = false;
             currentStepIndex_ = static_cast<int>(currentSteps_.size());
+            stepTransitioning_ = false;
+            stepTransitionProgress_ = 1.0f;
         }
 
         if (!currentSteps_.empty()) {
@@ -654,7 +918,7 @@ void TrieUI::draw() {
             ImGui::PushItemWidth(vpSize.x * 0.36f);
             if (ImGui::SliderInt("##TrieBottomTimeline", &frameIndex, 0, maxFrame, "")) {
                 autoplay_ = false;
-                currentStepIndex_ = std::clamp(frameIndex, 0, maxFrame);
+                startStepTransition(std::clamp(frameIndex, 0, maxFrame));
             }
             ImGui::PopItemWidth();
         }
@@ -662,11 +926,21 @@ void TrieUI::draw() {
     ImGui::End();
     ImGui::PopStyleColor();
 
-    if (!ImGui::GetIO().WantTextInput && autoplay_ && playbackMode_ == TriePlaybackMode::RunAtOnce && currentStepIndex_ < static_cast<int>(currentSteps_.size())) {
+    if (stepTransitioning_) {
+        const float safeDuration = std::max(0.08f, stepTransitionDuration_ / std::max(0.25f, playbackSpeed_));
+        stepTransitionProgress_ += dt / safeDuration;
+        if (stepTransitionProgress_ >= 1.0f) {
+            stepTransitionProgress_ = 1.0f;
+            stepTransitioning_ = false;
+            currentStepIndex_ = transitionToStep_;
+        }
+    }
+
+    if (!ImGui::GetIO().WantTextInput && autoplay_ && playbackMode_ == TriePlaybackMode::RunAtOnce && currentStepIndex_ < static_cast<int>(currentSteps_.size()) && !stepTransitioning_) {
         autoplayAccumulator_ += dt * playbackSpeed_;
         constexpr float kStepInterval = 0.45f;
-        while (autoplayAccumulator_ >= kStepInterval && currentStepIndex_ < static_cast<int>(currentSteps_.size())) {
-            ++currentStepIndex_;
+        while (autoplayAccumulator_ >= kStepInterval && currentStepIndex_ < static_cast<int>(currentSteps_.size()) && !stepTransitioning_) {
+            startStepTransition(currentStepIndex_ + 1);
             autoplayAccumulator_ -= kStepInterval;
         }
         if (currentStepIndex_ >= static_cast<int>(currentSteps_.size())) {
@@ -684,8 +958,22 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
     background.setFillColor(canvasBgColor_);
     window.draw(background);
 
-    TrieNode* root = trie.getRoot();
+    TrieNode* previewRoot = nullptr;
+    const int displayAppliedCount = std::clamp(
+        stepTransitioning_ && stepTransitionProgress_ < 0.5f ? transitionFromStep_ : currentStepIndex_,
+        0,
+        static_cast<int>(currentSteps_.size())
+    );
+    if (hasAnimationBase_ && animationBaseRoot_ != nullptr && !currentSteps_.empty()) {
+        previewRoot = cloneTrieNode(animationBaseRoot_);
+        applyStepsToPreviewTrie(previewRoot, currentSteps_, displayAppliedCount);
+    }
+
+    TrieNode* root = (previewRoot != nullptr) ? previewRoot : trie.getRoot();
     if (root == nullptr) {
+        if (previewRoot != nullptr) {
+            clearTrieNode(previewRoot);
+        }
         return;
     }
 
@@ -724,18 +1012,17 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
     scrollOffsetX_ = std::clamp(scrollOffsetX_, -10000.0f, 10000.0f);
     scrollOffsetY_ = std::clamp(scrollOffsetY_, -10000.0f, 10000.0f);
 
-    std::string activePath;
-    const int appliedCount = std::clamp(currentStepIndex_, 0, static_cast<int>(currentSteps_.size()));
-    for (int i = 0; i < appliedCount; ++i) {
-        const TrieInstruction& step = currentSteps_[i];
-        if ((step.trie_op == TrieOp::MOVE_TO_NODE || step.trie_op == TrieOp::CREATE_NODE) && step.character >= 'a' && step.character <= 'z') {
-            activePath.push_back(step.character);
-        }
-    }
+    const int fromStep = stepTransitioning_ ? transitionFromStep_ : currentStepIndex_;
+    const int toStep = stepTransitioning_ ? transitionToStep_ : currentStepIndex_;
+    const float transitionT = stepTransitioning_ ? easeInOut(stepTransitionProgress_) : 1.0f;
+    const std::string fromPath = buildActivePath(fromStep);
+    const std::string toPath = buildActivePath(toStep);
+    const std::string activePath = stepTransitioning_ ? fromPath : toPath;
 
     const TrieInstruction* activeInstruction = nullptr;
-    if (!currentSteps_.empty() && appliedCount > 0) {
-        activeInstruction = &currentSteps_[appliedCount - 1];
+    const int instructionIndex = stepTransitioning_ ? fromStep : toStep;
+    if (!currentSteps_.empty() && instructionIndex > 0) {
+        activeInstruction = &currentSteps_[instructionIndex - 1];
     }
 
     const float radius = std::clamp(nodeRadius_ * zoomScale_, 10.0f, 56.0f);
@@ -744,7 +1031,67 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
     const float initialGap = std::max(90.0f, static_cast<float>(size.x) * 0.34f * zoomScale_);
     const float verticalGap = 95.0f * zoomScale_;
 
-    drawTrieNode(window, root, startX, startY, initialGap, font, "", activePath, activeInstruction, radius, verticalGap);
+    const bool isCreateAnimation = (lastOperationMenuIndex_ == 0 && !currentSteps_.empty());
+    const int revealStepIndex = stepTransitioning_ && stepTransitionProgress_ < 0.5f ? fromStep : toStep;
+    std::unordered_set<std::string> visiblePrefixes;
+    visiblePrefixes.insert("");
+    if (isCreateAnimation) {
+        std::string currentPrefix;
+        const int applied = std::clamp(revealStepIndex, 0, static_cast<int>(currentSteps_.size()));
+        for (int i = 0; i < applied; ++i) {
+            const TrieInstruction& step = currentSteps_[i];
+            if ((step.trie_op == TrieOp::MOVE_TO_NODE || step.trie_op == TrieOp::CREATE_NODE) && step.character >= 'a' && step.character <= 'z') {
+                currentPrefix.push_back(step.character);
+                visiblePrefixes.insert(currentPrefix);
+            }
+            else if (step.trie_op == TrieOp::MARK_END) {
+                currentPrefix.clear();
+            }
+        }
+    }
+
+    nodePositions_.clear();
+    drawTrieNode(
+        window,
+        root,
+        startX,
+        startY,
+        initialGap,
+        font,
+        "",
+        activePath,
+        activeInstruction,
+        radius,
+        verticalGap,
+        isCreateAnimation ? &visiblePrefixes : nullptr
+    );
+
+    const auto findNodePosition = [&](const std::string& prefix) -> sf::Vector2f {
+        const auto it = nodePositions_.find(prefix);
+        if (it != nodePositions_.end()) {
+            return it->second;
+        }
+        return sf::Vector2f(startX, startY);
+    };
+
+    const sf::Vector2f fromPos = findNodePosition(fromPath);
+    const sf::Vector2f toPos = findNodePosition(toPath);
+    const sf::Vector2f markerPos(
+        lerp(fromPos.x, toPos.x, transitionT),
+        lerp(fromPos.y, toPos.y, transitionT)
+    );
+
+    sf::CircleShape ring(radius + 9.0f);
+    ring.setOrigin(sf::Vector2f(radius + 9.0f, radius + 9.0f));
+    ring.setPosition(markerPos);
+    ring.setFillColor(sf::Color::Transparent);
+    ring.setOutlineThickness(3.0f);
+    ring.setOutlineColor(highlightRingColor_);
+    window.draw(ring);
+
+    if (previewRoot != nullptr) {
+        clearTrieNode(previewRoot);
+    }
 }
 
 void TrieUI::drawTrieNode(
@@ -758,11 +1105,14 @@ void TrieUI::drawTrieNode(
     const std::string& activePath,
     const TrieInstruction* activeInstruction,
     float radius,
-    float verticalGap
+    float verticalGap,
+    const std::unordered_set<std::string>* visiblePrefixes
 ) {
     if (node == nullptr) {
         return;
     }
+
+    nodePositions_[prefix] = sf::Vector2f(x, y);
 
     const bool isRoot = prefix.empty();
     const bool isOnPath = !activePath.empty() && activePath.rfind(prefix, 0) == 0;
@@ -837,6 +1187,9 @@ void TrieUI::drawTrieNode(
 
         const char letter = static_cast<char>('a' + i);
         const std::string childPrefix = prefix + letter;
+        if (visiblePrefixes != nullptr && visiblePrefixes->find(childPrefix) == visiblePrefixes->end()) {
+            continue;
+        }
         const bool edgeOnPath = !activePath.empty() && activePath.rfind(childPrefix, 0) == 0;
         sf::Vertex line[] = {
             sf::Vertex{sf::Vector2f(x, y + radius), edgeOnPath ? highlightRingColor_ : edgeColor_},
@@ -855,7 +1208,8 @@ void TrieUI::drawTrieNode(
             activePath,
             activeInstruction,
             radius,
-            verticalGap
+            verticalGap,
+            visiblePrefixes
         );
 
         currentX += horizontalGap;

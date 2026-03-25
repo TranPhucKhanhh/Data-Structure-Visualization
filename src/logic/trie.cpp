@@ -1,5 +1,33 @@
 #include <logic/trie.h>
 
+#include <cctype>
+#include <fstream>
+#include <sstream>
+
+namespace {
+    std::vector<std::string> extractWords(const std::string& content)
+    {
+        std::vector<std::string> words;
+        std::string token;
+
+        for (char c : content) {
+            if (std::isalpha(static_cast<unsigned char>(c)) != 0) {
+                token.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            }
+            else if (!token.empty()) {
+                words.push_back(token);
+                token.clear();
+            }
+        }
+
+        if (!token.empty()) {
+            words.push_back(token);
+        }
+
+        return words;
+    }
+}
+
 ///-----------------------------------
 ///CONSTRUCTOR AND DESTRUCTOR
 ///-----------------------------------
@@ -12,6 +40,12 @@ Trie::Trie()
 Trie::~Trie()
 {
     _clear(root_node);
+}
+
+void Trie::clear()
+{
+    _clear(root_node);
+    root_node = new TrieNode();
 }
 
 //Helper function to clear the trie
@@ -48,18 +82,28 @@ void Trie::initFromKeyboard()
 
 void Trie::initFromList(std::vector<std::string>& word_list)
 {
+    clear();
     for (const std::string& _word : word_list) insertWord(_word);
 }
 
 void Trie::initFromFile(const std::string& file_path)
 {
-    // Implement later
+    std::ifstream file(file_path);
+    if (!file.is_open()) {
+        return;
+    }
+
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    std::vector<std::string> words = extractWords(buffer.str());
+    initFromList(words);
 }
 
 // Step by step initialization
 std::vector<TrieInstruction> Trie::initFromListStep(std::vector<std::string>& word_list)
 {
     std::vector<TrieInstruction> _steps;
+    clear();
     for (const std::string& _word : word_list) {
         std::vector<TrieInstruction> _step_for_word = insertWordStep(_word);
         _steps.insert(_steps.end(), _step_for_word.begin(), _step_for_word.end());
@@ -69,8 +113,15 @@ std::vector<TrieInstruction> Trie::initFromListStep(std::vector<std::string>& wo
 
 std::vector<TrieInstruction> Trie::initFromFileStep(const std::string& file_path)
 {
-    // Implement later
-    return {};
+    std::ifstream file(file_path);
+    if (!file.is_open()) {
+        return {};
+    }
+
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    std::vector<std::string> words = extractWords(buffer.str());
+    return initFromListStep(words);
 }
 
 

@@ -376,6 +376,12 @@ void SinglyLinkedListUI::draw() {
 
 	const bool hasTimelineFrames = singlyLinkedList.hasTimeline();
 	const SLLFrame displayFrame = singlyLinkedList.getInterpolatedFrame();
+	auto enableAutoplayDefault = [&]() {
+		autoplay_ = true;
+		playbackMode_ = PlaybackMode::RunAtOnce;
+		singlyLinkedList.autoplayAccumulator = 0.0f;
+	};
+
 	int displayedCodeLine = displayFrame.codeLine;
 	SLLOperationType displayedOpType = displayFrame.operationType;
 	if (singlyLinkedList.interpolation.isTransitioning) {
@@ -508,6 +514,7 @@ void SinglyLinkedListUI::draw() {
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
 				if (ImGui::Button("Empty", ImVec2(56.0f, 0.0f))) {
 					singlyLinkedList.initializeEmpty();
+					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
@@ -523,11 +530,13 @@ void SinglyLinkedListUI::draw() {
 				ImGui::SameLine();
 				if (ImGui::Button("Random", ImVec2(78.0f, 0.0f))) {
 					singlyLinkedList.initializeRandom(randomCount_, randomMin_, randomMax_);
+					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Random Sorted", ImVec2(122.0f, 0.0f))) {
 					singlyLinkedList.initializeRandomSorted(randomCount_, randomMin_, randomMax_);
+					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 
@@ -548,6 +557,7 @@ void SinglyLinkedListUI::draw() {
 						}
 						else {
 							singlyLinkedList.initializeFromValues(parsed, "Initialized from user defined list");
+							enableAutoplayDefault();
 						}
 					}
 
@@ -557,6 +567,7 @@ void SinglyLinkedListUI::draw() {
 					ImGui::SameLine();
 					if (ImGui::Button("Load txt", ImVec2(92.0f, 0.0f))) {
 						singlyLinkedList.initializeFromTextFile(txtPath_.data());
+						enableAutoplayDefault();
 					}
 				}
 			}
@@ -569,6 +580,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::SameLine();
 				if (ImGui::Button("Search", ImVec2(90.0f, 0.0f))) {
 					singlyLinkedList.searchValueViz(searchValue_);
+					enableAutoplayDefault();
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
@@ -586,6 +598,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::SameLine();
 				if (ImGui::Button("Insert", ImVec2(90.0f, 0.0f))) {
 					singlyLinkedList.addAtViz(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
+					enableAutoplayDefault();
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
@@ -597,6 +610,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::SameLine();
 				if (ImGui::Button("Remove", ImVec2(90.0f, 0.0f))) {
 					singlyLinkedList.deleteAtViz(static_cast<std::size_t>(std::max(0, deleteIndex_)));
+					enableAutoplayDefault();
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
@@ -614,6 +628,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::SameLine();
 				if (ImGui::Button("Update", ImVec2(90.0f, 0.0f))) {
 					singlyLinkedList.updateAtViz(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
+					enableAutoplayDefault();
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {

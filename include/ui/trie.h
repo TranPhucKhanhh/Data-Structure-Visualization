@@ -3,6 +3,8 @@
 #include <SFML/Graphics.hpp>
 #include <array>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "logic/trie.h" 
 
@@ -14,6 +16,7 @@ enum class TriePlaybackMode {
 class TrieUI {
 public:
     TrieUI();
+    ~TrieUI();
 
     void draw();
     void drawSfml(sf::RenderWindow& window);
@@ -21,11 +24,15 @@ public:
 private:
     // Các biến lưu trữ input từ người dùng
     std::array<char, 512> createWords_{};
+    std::array<char, 256> txtPath_{};
     std::array<char, 256> insertWord_{};
     std::array<char, 256> searchWord_{};
     std::array<char, 256> deleteWord_{};
     std::array<char, 256> updateOldWord_{};
     std::array<char, 256> updateNewWord_{};
+    int randomWordCount_ = 8;
+    int randomMinLength_ = 3;
+    int randomMaxLength_ = 8;
 
     // Lưu trữ các bước mô phỏng
     std::vector<TrieInstruction> currentSteps_;
@@ -66,6 +73,20 @@ private:
     TriePlaybackMode playbackMode_ = TriePlaybackMode::RunAtOnce;
     float playbackSpeed_ = 1.0f;
 
+    // Smooth transition state between timeline steps
+    bool stepTransitioning_ = false;
+    int transitionFromStep_ = 0;
+    int transitionToStep_ = 0;
+    float stepTransitionProgress_ = 1.0f;
+    float stepTransitionDuration_ = 0.32f;
+
+    // Cached node layout for animated active-marker movement
+    std::unordered_map<std::string, sf::Vector2f> nodePositions_;
+
+    // Snapshot root before an operation starts (used to replay visible animation state)
+    TrieNode* animationBaseRoot_ = nullptr;
+    bool hasAnimationBase_ = false;
+
     // Canvas interaction
     bool isCanvasDragging_ = false;
     sf::Vector2i lastDragMousePos_{0, 0};
@@ -83,8 +104,12 @@ private:
         const std::string& activePath,
         const TrieInstruction* activeInstruction,
         float radius,
-        float verticalGap
+        float verticalGap,
+        const std::unordered_set<std::string>* visiblePrefixes
     );
+
+    void startStepTransition(int targetStep);
+    std::string buildActivePath(int appliedCount) const;
 };
 
 inline TrieUI trie_ui;

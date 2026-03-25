@@ -50,13 +50,15 @@ public:
     Trie();
     ~Trie();
 
+    void clear();
+
     void initFromKeyboard(); // Use for debug
 
 	TrieNode* getRoot() { return root_node; }
 
     //The Do All At Once functions
     void initFromList(std::vector<std::string> &word_list);
-	void initFromFile(const std::string& file_path); // Implement latter
+	void initFromFile(const std::string& file_path);
     void insertWord(const std::string& word);
     bool searchWord(const std::string& word);
     void deleteWord(const std::string& word);
@@ -64,7 +66,7 @@ public:
 
     //The Step by Step functions
     std::vector<TrieInstruction> initFromListStep(std::vector<std::string> &word_list);
-    std::vector<TrieInstruction> initFromFileStep(const std::string& file_path); // Implement latter
+    std::vector<TrieInstruction> initFromFileStep(const std::string& file_path);
     std::vector<TrieInstruction> insertWordStep(const std::string& word);
     std::vector<TrieInstruction> searchWordStep(const std::string& word);
     std::vector<TrieInstruction> deleteWordStep(const std::string& word);
