@@ -462,7 +462,10 @@ void SinglyLinkedListUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
-			ImGui::SetWindowFontScale(2.0f);
+			const bool usingMenuListFont = (menuCardTitleFont != nullptr);
+			if (usingMenuListFont) {
+				ImGui::PushFont(menuCardTitleFont);
+			}
 			if (operationPanelOpenT_ > 0.6f) {
 				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
@@ -477,6 +480,9 @@ void SinglyLinkedListUI::draw() {
 				}
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);
+			}
+			if (usingMenuListFont) {
+				ImGui::PopFont();
 			}
 		}
 		ImGui::End();
@@ -495,7 +501,10 @@ void SinglyLinkedListUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
-			ImGui::SetWindowFontScale(1.30f);
+			const bool usingMenuInputFont = (menuCardDescFont != nullptr);
+			if (usingMenuInputFont) {
+				ImGui::PushFont(menuCardDescFont);
+			}
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
 				if (ImGui::Button("Empty", ImVec2(56.0f, 0.0f))) {
 					singlyLinkedList.initializeEmpty();
@@ -565,13 +574,13 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
 				ImGui::TextUnformatted("Index:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(80.0f);
+				ImGui::PushItemWidth(90.0f);
 				ImGui::InputInt("##InsertIndex", &addIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(80.0f);
+				ImGui::PushItemWidth(90.0f);
 				ImGui::InputInt("##InsertValue", &addValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
@@ -593,13 +602,13 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
 				ImGui::TextUnformatted("Index:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(80.0f);
+				ImGui::PushItemWidth(90.0f);
 				ImGui::InputInt("##UpdateIndex", &updateIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(80.0f);
+				ImGui::PushItemWidth(90.0f);
 				ImGui::InputInt("##UpdateValue", &updateValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
@@ -608,7 +617,6 @@ void SinglyLinkedListUI::draw() {
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
-				ImGui::SetWindowFontScale(1.0f);
 				ImGui::TextUnformatted("Style");
 				ImGui::SameLine();
 				const char* stylePresets[] = { "Classic", "Minimal", "Bold" };
@@ -663,6 +671,9 @@ void SinglyLinkedListUI::draw() {
 					highlightRingColor_ = sf::Color(255, 214, 102, 230);
 				}
 			}
+			if (usingMenuInputFont) {
+				ImGui::PopFont();
+			}
 		}
 		ImGui::End();
 		ImGui::PopStyleColor();
@@ -691,9 +702,14 @@ void SinglyLinkedListUI::draw() {
 			if (commentPanelOpenT_ > 0.55f) {
 				const char* status = displayFrame.message.empty() ? singlyLinkedList.lastMessage.c_str() : displayFrame.message.c_str();
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.14f, 0.10f, 0.07f, 1.0f));
-				ImGui::SetWindowFontScale(1.12f);
+				const bool usingCommentFont = (menuCardDescFont != nullptr);
+				if (usingCommentFont) {
+					ImGui::PushFont(menuCardDescFont);
+				}
 				ImGui::TextWrapped("%s", status);
-				ImGui::SetWindowFontScale(1.0f);
+				if (usingCommentFont) {
+					ImGui::PopFont();
+				}
 				ImGui::PopStyleColor();
 			}
 		}

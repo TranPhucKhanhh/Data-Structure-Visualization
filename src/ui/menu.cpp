@@ -2,7 +2,21 @@
 #include "ui/common.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
+
+namespace {
+	ImFont* getFallbackFont() {
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.FontDefault != nullptr) {
+			return io.FontDefault;
+		}
+		if (!io.Fonts->Fonts.empty()) {
+			return io.Fonts->Fonts[0];
+		}
+		return nullptr;
+	}
+}
 
 MenuUI::MenuUI() {
 	// Khởi tạo các tài nguyên nếu cần thiết (hiện tại để trống)
@@ -28,26 +42,60 @@ void MenuUI::draw() {
 		return;
 	}
 
+	ImGui::SetWindowFontScale(1.0f);
+
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
+	ImFont* fallbackFont = getFallbackFont();
+	ImFont* titleFont = menuTitleFont != nullptr ? menuTitleFont : fallbackFont;
+	ImFont* subtitleFont = menuSubtitleFont != nullptr ? menuSubtitleFont : fallbackFont;
+	ImFont* cardTitleFont = menuCardTitleFont != nullptr ? menuCardTitleFont : fallbackFont;
+	ImFont* cardDescFont = menuCardDescFont != nullptr ? menuCardDescFont : fallbackFont;
+	const float titleFontSize = titleFont != nullptr ? titleFont->FontSize : 56.0f;
+	const float subtitleFontSize = subtitleFont != nullptr ? subtitleFont->FontSize : 28.0f;
+	const float cardTitleFontSize = cardTitleFont != nullptr ? cardTitleFont->FontSize : 24.0f;
+	const float cardDescFontSize = cardDescFont != nullptr ? cardDescFont->FontSize : 20.0f;
 	const ImVec2 origin = ImGui::GetWindowPos();
-	const float titleY = origin.y + 26.0f;
+	const float titleY = origin.y + 24.0f;
 	const char* title = "Data Structure Visualization";
-	const ImVec2 titleSize = ImGui::CalcTextSize(title);
-	drawList->AddText(
-		ImVec2(origin.x + (vpSize.x - titleSize.x) * 0.5f, titleY),
-		IM_COL32(20, 26, 33, 255),
-		title
-	);
+	const ImVec2 titleSize = titleFont
+		? titleFont->CalcTextSizeA(titleFontSize, FLT_MAX, 0.0f, title)
+		: ImGui::CalcTextSize(title);
+	if (titleFont) {
+		drawList->AddText(titleFont, titleFontSize,
+			ImVec2(origin.x + (vpSize.x - titleSize.x) * 0.5f, titleY),
+			IM_COL32(20, 26, 33, 255),
+			title
+		);
+	}
+	else {
+		drawList->AddText(
+			ImVec2(origin.x + (vpSize.x - titleSize.x) * 0.5f, titleY),
+			IM_COL32(20, 26, 33, 255),
+			title
+		);
+	}
 
 	const char* subtitle = "Select a visualizer module";
-	const ImVec2 subtitleSize = ImGui::CalcTextSize(subtitle);
-	drawList->AddText(
-		ImVec2(origin.x + (vpSize.x - subtitleSize.x) * 0.5f, titleY + 32.0f),
-		IM_COL32(107, 114, 128, 255),
-		subtitle
-	);
+	const ImVec2 subtitleSize = subtitleFont
+		? subtitleFont->CalcTextSizeA(subtitleFontSize, FLT_MAX, 0.0f, subtitle)
+		: ImGui::CalcTextSize(subtitle);
+	const float subtitleY = titleY + titleSize.y + 8.0f;
+	if (subtitleFont) {
+		drawList->AddText(subtitleFont, subtitleFontSize,
+			ImVec2(origin.x + (vpSize.x - subtitleSize.x) * 0.5f, subtitleY),
+			IM_COL32(107, 114, 128, 255),
+			subtitle
+		);
+	}
+	else {
+		drawList->AddText(
+			ImVec2(origin.x + (vpSize.x - subtitleSize.x) * 0.5f, subtitleY),
+			IM_COL32(107, 114, 128, 255),
+			subtitle
+		);
+	}
 
-	const float topPadding = 92.0f;
+	const float topPadding = subtitleY + subtitleSize.y + 22.0f - origin.y;
 	const float gap = 24.0f;
 	const float areaWidth = std::min(vpSize.x - 80.0f, 1220.0f);
 	const float cardWidth = (areaWidth - gap) * 0.5f;
@@ -189,8 +237,14 @@ void MenuUI::draw() {
 		drawList->AddRectFilled(previewMin, previewMax, previewBg, 4.0f);
 		drawPreview(iconType, previewMin, previewMax, IM_COL32(244, 248, 255, 245), hovered, static_cast<float>(ImGui::GetTime()));
 
-		drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 14.0f), IM_COL32(19, 32, 43, 255), label);
-		drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 36.0f), IM_COL32(84, 97, 110, 255), desc);
+		if (cardTitleFont != nullptr && cardDescFont != nullptr) {
+			drawList->AddText(cardTitleFont, cardTitleFontSize, ImVec2(min.x + 18.0f, previewMax.y + 14.0f), IM_COL32(19, 32, 43, 255), label);
+			drawList->AddText(cardDescFont, cardDescFontSize, ImVec2(min.x + 18.0f, previewMax.y + 42.0f), IM_COL32(84, 97, 110, 255), desc);
+		}
+		else {
+			drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 14.0f), IM_COL32(19, 32, 43, 255), label);
+			drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 42.0f), IM_COL32(84, 97, 110, 255), desc);
+		}
 	};
 
 	drawCard("card_ll", "Linked List", "Node and pointer operations", UIState::SinglyLinkedList, IM_COL32(76, 97, 185, 255), 0, ImVec2(startX, startY));

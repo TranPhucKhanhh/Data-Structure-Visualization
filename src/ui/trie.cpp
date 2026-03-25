@@ -300,7 +300,10 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::SetWindowFontScale(2.0f);
+            const bool usingMenuListFont = (menuCardTitleFont != nullptr);
+            if (usingMenuListFont) {
+                ImGui::PushFont(menuCardTitleFont);
+            }
             if (operationPanelOpenT_ > 0.6f) {
                 ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
@@ -318,6 +321,9 @@ void TrieUI::draw() {
                 ImGui::PopStyleVar();
                 ImGui::PopStyleColor(3);
             }
+            if (usingMenuListFont) {
+                ImGui::PopFont();
+            }
         }
         ImGui::End();
         ImGui::PopStyleColor();
@@ -334,7 +340,10 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::SetWindowFontScale(1.25f);
+            const bool usingMenuInputFont = (menuCardDescFont != nullptr);
+            if (usingMenuInputFont) {
+                ImGui::PushFont(menuCardDescFont);
+            }
             if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
                 ImGui::TextUnformatted("A =");
                 ImGui::SameLine();
@@ -436,7 +445,6 @@ void TrieUI::draw() {
                 }
             }
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
-                ImGui::SetWindowFontScale(1.0f);
                 ImGui::PushItemWidth(220.0f);
                 ImGui::SliderFloat("Node Radius", &nodeRadius_, 12.0f, 44.0f, "%.1f");
                 ImGui::SliderFloat("Edge Thickness", &edgeThickness_, 1.0f, 6.0f, "%.1f");
@@ -459,6 +467,10 @@ void TrieUI::draw() {
                     valueTextColor_ = sf::Color(42, 42, 42, 255);
                     highlightRingColor_ = sf::Color(255, 214, 102, 230);
                 }
+            }
+
+            if (usingMenuInputFont) {
+                ImGui::PopFont();
             }
         }
         ImGui::End();
@@ -502,9 +514,14 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoScrollbar)) {
             if (commentPanelOpenT_ > 0.55f) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.14f, 0.10f, 0.07f, 1.0f));
-                ImGui::SetWindowFontScale(1.12f);
+                const bool usingCommentFont = (menuCardDescFont != nullptr);
+                if (usingCommentFont) {
+                    ImGui::PushFont(menuCardDescFont);
+                }
                 ImGui::TextWrapped("%s", currentComment.c_str());
-                ImGui::SetWindowFontScale(1.0f);
+                if (usingCommentFont) {
+                    ImGui::PopFont();
+                }
                 ImGui::PopStyleColor();
             }
         }
