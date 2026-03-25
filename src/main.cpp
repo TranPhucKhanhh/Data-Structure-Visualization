@@ -57,7 +57,15 @@ namespace {
 
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Data Visualization :))");
+	sf::ContextSettings contextSettings;
+	contextSettings.antiAliasingLevel = 8;
+	sf::RenderWindow window(
+		sf::VideoMode({ 1920, 1080 }),
+		"Data Visualization :))",
+		sf::Style::Default,
+		sf::State::Windowed,
+		contextSettings
+	);
 
 	if (!ImGui::SFML::Init(window)) {
 		return -1;
