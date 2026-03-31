@@ -1,5 +1,7 @@
 #include <logic/heap.h>
 #include <fstream>
+#include <cstdlib>
+#include <ctime>
 
 ///-----------------------------------
 /// Heap helper functions
@@ -113,6 +115,19 @@ void Heap::initFromFile(const std::string& file_path)
 	}
 
 	initFromList(values);
+}
+
+void Heap::initRandom(const int &num) {
+    std::vector<int> vc;
+    int max_value = 100;
+    int min_value = 0;
+
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    for (int i = 0; i < num; i++) {
+        vc.push_back(min_value + (std::rand() % (max_value - min_value + 1)));
+    }
+    
+    initFromList(vc);
 }
 
 void Heap::insertValue(const int& val) {

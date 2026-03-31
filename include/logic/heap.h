@@ -54,7 +54,8 @@ public:
 	// Do All At Once functions
 	void initFromList(const std::vector<int>&  list);
 	void initFromFile(const std::string& file_path);
-	void insertValue(const int& val);
+	void initRandom(const int &num);
+    void insertValue(const int& val);
 	bool searchValue(const int& val);
 	void deleteTop();
 	void updateValue(const int& old_value, const int &new_value);
