@@ -335,6 +335,29 @@ namespace {
             }
         }
     }
+
+    int countVisibleLeafSlots(TrieNode* node, const std::string& prefix, const std::unordered_set<std::string>* visiblePrefixes) {
+        if (node == nullptr) {
+            return 0;
+        }
+
+        int total = 0;
+        for (int i = 0; i < 26; ++i) {
+            TrieNode* child = node->children[i];
+            if (child == nullptr) {
+                continue;
+            }
+
+            const std::string childPrefix = prefix + static_cast<char>('a' + i);
+            if (visiblePrefixes != nullptr && visiblePrefixes->find(childPrefix) == visiblePrefixes->end()) {
+                continue;
+            }
+
+            total += countVisibleLeafSlots(child, childPrefix, visiblePrefixes);
+        }
+
+        return std::max(1, total);
+    }
 }
 
 TrieUI::TrieUI() {}
@@ -830,7 +853,7 @@ void TrieUI::draw() {
                     ImGui::Separator();
                     for (int i = 0; i < lineCount; ++i) {
                         if ((i + 1) == highlightedLine) {
-                            ImGui::TextColored(ImVec4(0.05f, 0.05f, 0.05f, 1.0f), "> %s", codeArray[i]);
+                            ImGui::TextColored(ImVec4(0.82f, 0.12f, 0.08f, 1.0f), "> %s", codeArray[i]);
                         }
                         else {
                             ImGui::TextUnformatted(codeArray[i]);
@@ -1173,46 +1196,56 @@ void TrieUI::drawTrieNode(
         window.draw(letterText);
     }
 
-    int childCount = 0;
-    for (int i = 0; i < 26; ++i) {
-        if (node->children[i] != nullptr) {
-            ++childCount;
-        }
-    }
+    struct VisibleChild {
+        TrieNode* node = nullptr;
+        std::string prefix;
+        int leafSlots = 1;
+    };
 
-    if (childCount == 0) {
-        return;
-    }
-
-    const float nextY = y + verticalGap;
-    float currentX = x - (horizontalGap * static_cast<float>(childCount - 1)) * 0.5f;
-
+    std::vector<VisibleChild> visibleChildren;
+    visibleChildren.reserve(26);
+    int totalLeafSlots = 0;
     for (int i = 0; i < 26; ++i) {
         TrieNode* child = node->children[i];
         if (child == nullptr) {
             continue;
         }
 
-        const char letter = static_cast<char>('a' + i);
-        const std::string childPrefix = prefix + letter;
+        const std::string childPrefix = prefix + static_cast<char>('a' + i);
         if (visiblePrefixes != nullptr && visiblePrefixes->find(childPrefix) == visiblePrefixes->end()) {
             continue;
         }
-        const bool edgeOnPath = !activePath.empty() && activePath.rfind(childPrefix, 0) == 0;
+
+        const int slots = countVisibleLeafSlots(child, childPrefix, visiblePrefixes);
+        visibleChildren.push_back(VisibleChild{ child, childPrefix, std::max(1, slots) });
+        totalLeafSlots += std::max(1, slots);
+    }
+
+    if (visibleChildren.empty()) {
+        return;
+    }
+
+    const float nextY = y + verticalGap;
+    const float slotWidth = std::max(radius * 2.2f, horizontalGap);
+    float currentX = x - (slotWidth * static_cast<float>(std::max(0, totalLeafSlots - 1))) * 0.5f;
+
+    for (const VisibleChild& childInfo : visibleChildren) {
+        const float childCenterX = currentX + (slotWidth * static_cast<float>(childInfo.leafSlots - 1)) * 0.5f;
+        const bool edgeOnPath = !activePath.empty() && activePath.rfind(childInfo.prefix, 0) == 0;
         sf::Vertex line[] = {
             sf::Vertex{sf::Vector2f(x, y + radius), edgeOnPath ? highlightRingColor_ : edgeColor_},
-            sf::Vertex{sf::Vector2f(currentX, nextY - radius), edgeOnPath ? highlightRingColor_ : edgeColor_}
+            sf::Vertex{sf::Vector2f(childCenterX, nextY - radius), edgeOnPath ? highlightRingColor_ : edgeColor_}
         };
         window.draw(line, 2, sf::PrimitiveType::Lines);
 
         drawTrieNode(
             window,
-            child,
-            currentX,
+            childInfo.node,
+            childCenterX,
             nextY,
-            std::max(48.0f, horizontalGap / 1.6f),
+            std::max(radius * 2.0f, horizontalGap / 1.35f),
             font,
-            childPrefix,
+            childInfo.prefix,
             activePath,
             activeInstruction,
             radius,
@@ -1220,6 +1253,6 @@ void TrieUI::drawTrieNode(
             visiblePrefixes
         );
 
-        currentX += horizontalGap;
+        currentX += slotWidth * static_cast<float>(childInfo.leafSlots);
     }
 }

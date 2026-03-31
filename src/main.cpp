@@ -44,6 +44,7 @@ namespace {
 		}
 		else if (uiConfig.state == UIState::Heap) {
 			heap_ui.draw();
+			heap_ui.drawSfml(window);
 		}
 		else if (uiConfig.state == UIState::ShortestPath) {
 			shortest_path_ui.draw();

@@ -182,6 +182,7 @@ std::vector<HeapInstruction> Heap::initFromListStep(const std::vector<int>& list
 	std::vector<HeapInstruction> instructions;
 	heap = list;
 	for (int i = ((int) heap.size() / 2) - 1; i >= 0; --i) {
+		instructions.push_back(HeapInstruction(HeapOp::VisitStraight, i));
 		std::vector<HeapInstruction> tmp = heapifyDownStep(i);
 		instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
 	}
@@ -232,6 +233,7 @@ std::vector<HeapInstruction> Heap::updateValueStep(const int& old_value, const i
 {
 	std::vector<HeapInstruction> instructions;
 	for (int i = 0; i < heap.size(); ++i) {
+		instructions.push_back(HeapInstruction(HeapOp::VisitStraight, i));
 		if (heap[i] == old_value) {
 			heap[i] = new_value;
 			instructions.push_back(HeapInstruction(HeapOp::UpdateValue, new_value));
@@ -249,7 +251,6 @@ std::vector<HeapInstruction> Heap::updateValueStep(const int& old_value, const i
 			instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
 			return instructions;
 		}
-		instructions.push_back(HeapInstruction(HeapOp::VisitStraight));
 	}
 	return instructions;
 }
@@ -257,12 +258,13 @@ std::vector<HeapInstruction> Heap::updateValueStep(const int& old_value, const i
 std::vector<HeapInstruction> Heap::searchValueStep(const int& val)
 {
 	std::vector<HeapInstruction> instructions;
-	for (const int& x : heap) {
+	for (int i = 0; i < heap.size(); ++i) {
+		const int& x = heap[i];
+		instructions.push_back(HeapInstruction(HeapOp::VisitStraight, i));
 		if (x == val) {
 			instructions.push_back(HeapInstruction(HeapOp::FoundValue));
 			return instructions;
 		}
-		instructions.push_back(HeapInstruction(HeapOp::VisitStraight));
 	}
 	instructions.push_back(HeapInstruction(HeapOp::NotFound));
 	return instructions;
