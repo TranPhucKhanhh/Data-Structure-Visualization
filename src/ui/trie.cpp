@@ -960,7 +960,9 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
 
     TrieNode* previewRoot = nullptr;
     const int displayAppliedCount = std::clamp(
-        stepTransitioning_ && stepTransitionProgress_ < 0.5f ? transitionFromStep_ : currentStepIndex_,
+        stepTransitioning_
+            ? (stepTransitionProgress_ < 0.5f ? transitionFromStep_ : transitionToStep_)
+            : currentStepIndex_,
         0,
         static_cast<int>(currentSteps_.size())
     );
@@ -1066,10 +1068,16 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
         isCreateAnimation ? &visiblePrefixes : nullptr
     );
 
-    const auto findNodePosition = [&](const std::string& prefix) -> sf::Vector2f {
-        const auto it = nodePositions_.find(prefix);
-        if (it != nodePositions_.end()) {
-            return it->second;
+    const auto findNodePosition = [&](std::string prefix) -> sf::Vector2f {
+        while (true) {
+            const auto it = nodePositions_.find(prefix);
+            if (it != nodePositions_.end()) {
+                return it->second;
+            }
+            if (prefix.empty()) {
+                break;
+            }
+            prefix.pop_back();
         }
         return sf::Vector2f(startX, startY);
     };
