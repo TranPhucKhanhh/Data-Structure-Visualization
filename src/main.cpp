@@ -12,24 +12,20 @@
 #include <filesystem>
 #include <string>
 
+#include <iostream>
+
 namespace {
 	std::filesystem::path resolveFontPath()
 	{
-		const std::array<std::filesystem::path, 5> candidates = {
-			std::filesystem::path("fonts/Roboto_Condensed-Regular.ttf"),
-			std::filesystem::path("../fonts/Roboto_Condensed-Regular.ttf"),
-			std::filesystem::path("../../fonts/Roboto_Condensed-Regular.ttf"),
-			std::filesystem::path("../../../fonts/Roboto_Condensed-Regular.ttf"),
-			std::filesystem::path("d:/Final Project CS163/Data-Structure-Visualization/fonts/Roboto_Condensed-Regular.ttf")
-		};
-
-		for (const auto& candidate : candidates) {
-			if (std::filesystem::exists(candidate)) {
-				return candidate;
-			}
+		const std::string font_name = "/Roboto_Condensed-Regular.ttf";
+		const auto path = std::filesystem::path(std::string(ASSET_FONT + font_name));
+		if (std::filesystem::exists(path)) {
+			return path;
 		}
-
+	
+		std::cerr << "Warning: Font file not found at " << path << std::endl;
 		return {};
+
 	}
 
 	void drawActiveScreen(sf::RenderWindow& window)
@@ -82,11 +78,8 @@ int main()
 		menuCardTitleFont = io.Fonts->AddFontFromFileTTF(fontPathCStr, 24.0f);
 		menuCardDescFont = io.Fonts->AddFontFromFileTTF(fontPathCStr, 20.0f);
 
-		if (menuCardDescFont != nullptr) {
-			io.FontDefault = menuCardDescFont;
-			const bool fontTextureUpdated = ImGui::SFML::UpdateFontTexture();
-			(void)fontTextureUpdated;
-		}
+		io.FontDefault = menuCardDescFont ? menuCardDescFont : io.FontDefault;
+		(void) ImGui::SFML::UpdateFontTexture();
 	}
 
 	sf::Clock deltaClock;

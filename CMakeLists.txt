@@ -74,3 +74,5 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT D
 target_compile_options(DataVisualization PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/FS>
 )
+
+target_compile_definitions(DataVisualization PRIVATE ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts")
