@@ -50,6 +50,8 @@ public:
 
 	void clear() { heap.clear(); }
 	void swapType() { heap_type = (heap_type == HeapType::MinHeap) ? HeapType::MaxHeap : HeapType::MinHeap; }
+	const std::vector<int>& getData() const { return heap; }
+	HeapType getType() const { return heap_type; }
 
 	// Do All At Once functions
 	void initFromList(const std::vector<int>&  list);
