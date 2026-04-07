@@ -76,3 +76,4 @@ target_compile_options(DataVisualization PRIVATE
 )
 
 target_compile_definitions(DataVisualization PRIVATE ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts")
+
