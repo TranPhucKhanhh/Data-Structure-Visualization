@@ -1,11 +1,13 @@
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #include <cstdint>
-#else
+#include <cstdio>
+#include <cstring>
+#elif defined(_WIN32)
 #include <Windows.h>
 #include <shobjidl.h>
 #endif
-#include <cstring>
-#include <string.h>
+
+#include <string>
 #include "utils/SimpleFileDialog.h"
 
 
@@ -13,56 +15,75 @@
 std::string cr::utils::SimpleFileDialog::dialog()
 {
 #if defined(linux) || defined(__linux) || defined(__linux__)
-    char filename[1024];
-    FILE *f = popen("zenity --file-selection", "r");
-    fgets(filename, 1024, f);
-    filename[strlen(filename) - 1] = 0;
-    std::string file(filename);
-    return file;
-#else
-    IFileOpenDialog* pFileOpen = nullptr;
-    HRESULT hr;
-    PWSTR file;
-    char* filename;
+    char filename[1024] = {};
 
-    hr = CoInitializeEx(NULL,COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    if (SUCCEEDED(hr))
-    {
-        hr = CoCreateInstance(CLSID_FileOpenDialog,
-                              NULL, CLSCTX_ALL,
-                              IID_IFileOpenDialog,
-                              (void**)&pFileOpen);
-        if (SUCCEEDED(hr))
-        {
-            pFileOpen->SetTitle(L"OPEN VIDEO FILE");
-            hr = pFileOpen->Show(NULL);
-            if (SUCCEEDED(hr))
-            {
-                IShellItem* pItem;
-                hr = pFileOpen->GetResult(&pItem);
-                if (SUCCEEDED(hr))
-                {
-                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &file);
-                    if (SUCCEEDED(hr))
-                    {
-                        pItem->Release();
-                        int count = WideCharToMultiByte(
-                        CP_ACP, 0, file, (int)wcslen(file), 0, 0, NULL, NULL);
-                        filename = new char[(size_t)count + 1];
-                        WideCharToMultiByte(CP_ACP, 0, file, count, filename,
-                                            count + 1, NULL, NULL);
-                        filename[(size_t)count] = '\0';
-                        std::string file(filename);
-                        delete[] filename;
-                        return file;
+    FILE* f = popen("zenity --file-selection", "r");
+    if (!f) return "";
+
+    if (!fgets(filename, sizeof(filename), f)) {
+        pclose(f);
+        return "";
+    }
+
+    pclose(f);
+
+    size_t len = strlen(filename);
+    if (len > 0 && filename[len - 1] == '\n') {
+        filename[len - 1] = '\0';
+    }
+
+    return std::string(filename);
+
+#elif defined(_WIN32)
+    IFileOpenDialog* pFileOpen = nullptr;
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (FAILED(hr)) {
+        return "";
+    }
+
+    std::string result;
+
+    hr = CoCreateInstance(
+        CLSID_FileOpenDialog,
+        NULL,
+        CLSCTX_ALL,
+        IID_IFileOpenDialog,
+        (void**)&pFileOpen
+    );
+
+    if (SUCCEEDED(hr) && pFileOpen) {
+        pFileOpen->SetTitle(L"OPEN VIDEO FILE");
+
+        hr = pFileOpen->Show(NULL);
+        if (SUCCEEDED(hr)) {
+            IShellItem* pItem = nullptr;
+            hr = pFileOpen->GetResult(&pItem);
+
+            if (SUCCEEDED(hr) && pItem) {
+                PWSTR file = nullptr;
+                hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &file);
+
+                if (SUCCEEDED(hr) && file) {
+                    int count = WideCharToMultiByte(CP_UTF8, 0, file, -1, NULL, 0, NULL, NULL);
+                    if (count > 0) {
+                        std::string utf8(count - 1, '\0');
+                        WideCharToMultiByte(CP_UTF8, 0, file, -1, utf8.data(), count, NULL, NULL);
+                        result = utf8;
                     }
+                    CoTaskMemFree(file);
                 }
+
                 pItem->Release();
-                return "";
             }
         }
+
+        pFileOpen->Release();
     }
-    pFileOpen->Release();
+
+    CoUninitialize();
+    return result;
+
+#else
     return "";
 #endif
 }
