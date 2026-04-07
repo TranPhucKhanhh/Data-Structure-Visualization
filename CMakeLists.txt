@@ -60,7 +60,11 @@ foreach(f ${SRC_FILES})
     message(STATUS "Source: ${f}")
 endforeach()
 
-target_include_directories(DataVisualization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(DataVisualization PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Headers/include"
+    "${imgui_SOURCE_DIR}" 
+    "${imgui_SOURCE_DIR}/backends"
+)
 
 target_compile_features(DataVisualization PRIVATE cxx_std_17)
 
@@ -76,3 +80,7 @@ target_compile_options(DataVisualization PRIVATE
 )
 
 target_compile_definitions(DataVisualization PRIVATE ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts")
+
+target_compile_definitions(DataVisualization PRIVATE ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts")
+
+
