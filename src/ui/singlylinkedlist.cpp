@@ -5,10 +5,13 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdint>
 #include <cmath>
 #include <filesystem>
 #include <string>
+
+#include "utils/SimpleFileDialog.h"
 
 namespace {
 	enum class SLLCodeVariant {
@@ -331,16 +334,11 @@ namespace {
 
 		if (!attempted) {
 			attempted = true;
-			const std::filesystem::path candidates[] = {
-				std::filesystem::path("../_deps/imgui-src/misc/fonts/DroidSans.ttf"),
-				std::filesystem::path("../_deps/imgui-src/misc/fonts/Roboto-Medium.ttf"),
-				std::filesystem::path("C:/Windows/Fonts/arial.ttf")
-			};
-
-			for (const auto& path : candidates) {
+			const std::string font_name = "/DroidSans.ttf";
+			const auto path = std::filesystem::path(std::string(ASSET_FONT + font_name));
+			if (std::filesystem::exists(path)) {
 				if (font.openFromFile(path)) {
 					loaded = true;
-					break;
 				}
 			}
 		}
@@ -564,6 +562,16 @@ void SinglyLinkedListUI::draw() {
 					ImGui::PushItemWidth(320.0f);
 					ImGui::InputText(".txt path", txtPath_.data(), txtPath_.size());
 					ImGui::PopItemWidth();
+
+					ImGui::SameLine();
+					if (ImGui::Button("Browse File", ImVec2(110.0f, 0.0f))) {
+						std::string selectedPath = cr::utils::SimpleFileDialog::dialog(); 
+
+						if (!selectedPath.empty()) {
+							std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
+						}
+					}
+
 					ImGui::SameLine();
 					if (ImGui::Button("Load txt", ImVec2(92.0f, 0.0f))) {
 						singlyLinkedList.initializeFromTextFile(txtPath_.data());
