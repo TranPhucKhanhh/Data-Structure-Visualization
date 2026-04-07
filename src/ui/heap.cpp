@@ -7,12 +7,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <filesystem>
 #include <random>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include "utils/SimpleFileDialog.h"
 
 namespace {
 	float lerp(float a, float b, float t) {
@@ -518,11 +521,24 @@ void HeapUI::draw() {
 					}
 				}
 
-				ImGui::PushItemWidth(320.0f);
+				const float browseButtonW = 110.0f;
+				const float loadButtonW = 92.0f;
+				const float pathInputW = 320.0f;
+
+				ImGui::PushItemWidth(pathInputW);
 				ImGui::InputText(".txt path", txtPath_.data(), txtPath_.size());
 				ImGui::PopItemWidth();
+
 				ImGui::SameLine();
-				if (ImGui::Button("Load txt", ImVec2(92.0f, 0.0f))) {
+				if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
+					std::string selectedPath = cr::utils::SimpleFileDialog::dialog ();  
+					if (!selectedPath.empty()) {
+						std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Load txt", ImVec2(loadButtonW, 0.0f))) {
 					try {
 						heap.clear();
 						std::vector<HeapInstruction> steps = heap.initFromFileStep(txtPath_.data());

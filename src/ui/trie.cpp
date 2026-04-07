@@ -9,6 +9,7 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <random>
 #include <sstream>
@@ -16,6 +17,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include "utils/SimpleFileDialog.h"
 
 namespace {
     float lerp(float a, float b, float t) {
@@ -34,6 +37,7 @@ namespace {
 
         if (!attempted) {
             attempted = true;
+
             const std::string font_name = "/DroidSans.ttf";
             const auto path = std::filesystem::path(std::string(ASSET_FONT + font_name));
             if (std::filesystem::exists(path)) {
@@ -615,11 +619,27 @@ void TrieUI::draw() {
 
                 ImGui::Spacing();
                 ImGui::TextUnformatted("Load from .txt");
+
+                const float browseButtonW = 110.0f;
                 const float loadButtonW = 100.0f;
-                const float loadInputW = std::max(180.0f, ImGui::GetContentRegionAvail().x - loadButtonW - 8.0f);
+                const float spacingW = 16.0f;
+                const float loadInputW = std::max(
+                    180.0f,
+                    ImGui::GetContentRegionAvail().x - browseButtonW - loadButtonW - spacingW
+                );
+
                 ImGui::PushItemWidth(loadInputW);
                 ImGui::InputText("##TrieLoadTxt", txtPath_.data(), txtPath_.size());
                 ImGui::PopItemWidth();
+
+                ImGui::SameLine();
+                if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
+                    std::string selectedPath = cr::utils::SimpleFileDialog::dialog();  
+                    if (!selectedPath.empty()) {
+                        std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
+                    }
+                }
+
                 ImGui::SameLine();
                 if (ImGui::Button("Load txt", ImVec2(loadButtonW, 0.0f))) {
                     const std::filesystem::path filePath(txtPath_.data());
@@ -637,6 +657,7 @@ void TrieUI::draw() {
                         }
                     }
                 }
+
                 ImGui::Spacing();
             }
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
