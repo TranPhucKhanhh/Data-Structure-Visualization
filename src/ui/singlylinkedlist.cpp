@@ -32,63 +32,63 @@ namespace {
 	}
 
 	const char* kInsertFirstCode[] = {
-		"1  FUNCTION insertFirst(head, value):",
-		"2      // no traversal needed (insert at head)",
-		"3      newNode = Create Node(value)",
-		"4      head = newNode",
-		"5      newNode.next = oldHead"
+	"1  FUNCTION insertFirst(head, value):",
+	"2      // target position is head",
+	"3      newNode = Create Node(value)",
+	"4      newNode.next = head",
+	"5      head = newNode"
 	};
 
 	const char* kInsertEndCode[] = {
 		"1  FUNCTION insertEnd(head, value):",
 		"2      temp = head; WHILE temp.next != null: temp = temp.next",
 		"3      newNode = Create Node(value)",
-		"4      temp.next = newNode",
-		"5      newNode.next = null"
+		"4      newNode.next = null",
+		"5      temp.next = newNode"
 	};
 
 	const char* kInsertMiddleCode[] = {
 		"1  FUNCTION insertMiddle(head, value, position):",
 		"2      temp = head; FOR i in [1..position-1]: temp = temp.next",
 		"3      newNode = Create Node(value)",
-		"4      temp.next = newNode",
-		"5      newNode.next = nextNode"
+		"4      newNode.next = temp.next",
+		"5      temp.next = newNode"
 	};
 
 	const char* kDeleteFirstCode[] = {
 		"1  FUNCTION deleteFirst(head):",
-		"2      // no traversal needed (target is head)",
+		"2      // target is head",
 		"3      target = head",
-		"4      remove target node",
-		"5      head = head.next"
+		"4      head = target.next",
+		"5      delete target"
 	};
 
 	const char* kDeleteEndCode[] = {
 		"1  FUNCTION deleteEnd(head):",
-		"2      temp = head; WHILE temp.next != tail: temp = temp.next",
-		"3      target = tail",
-		"4      remove target node",
-		"5      temp.next = null"
+		"2      temp = head; WHILE temp.next.next != null: temp = temp.next",
+		"3      target = temp.next",
+		"4      temp.next = null",
+		"5      delete target"
 	};
 
 	const char* kDeleteMiddleCode[] = {
 		"1  FUNCTION deleteMiddle(head, position):",
 		"2      temp = head; FOR i in [1..position-1]: temp = temp.next",
 		"3      target = temp.next",
-		"4      remove target node",
-		"5      temp.next = nodeAfterTarget"
+		"4      temp.next = target.next",
+		"5      delete target"
 	};
 
 	const char* kSearchCode[] = {
 		"1  FUNCTION search(head, target):",
-		"2      compare current node with target",
-		"3      RETURN True (Found)",
-		"4      RETURN False (Not Found)"
+		"2      FOR each node from head to null",
+		"3      IF current.data == target: RETURN True",
+		"4      RETURN False"
 	};
 
 	const char* kUpdateCode[] = {
-		"1  FUNCTION update(head, oldValue, newValue):",
-		"2      traverse to target node",
+		"1  FUNCTION update(head, position, newValue):",
+		"2      current = head; FOR i in [0..position-1]: current = current.next",
 		"3      current.data = newValue"
 	};
 
@@ -99,15 +99,26 @@ namespace {
 			return SLLCodeVariant::None;
 		}
 
-		int index = -1;
-		if (activeLine == 5) {
-			index = frame->activeIndex;
-		}
-		else {
-			index = frame->secondaryIndex;
+		if (frame->message.find("Set head to new node") != std::string::npos) {
+			return SLLCodeVariant::InsertFirst;
 		}
 
-		if (index < 0) {
+		int insertedIndex = -1;
+
+		if (frame->message.find("Set prev->next to new node") != std::string::npos) {
+			insertedIndex = frame->secondaryIndex;
+		}
+		else if (frame->message.find("Set new node next") != std::string::npos) {
+			insertedIndex = frame->activeIndex;
+		}
+		else if (frame->secondaryIndex >= 0) {
+			insertedIndex = frame->secondaryIndex;
+		}
+		else if (frame->activeIndex >= 0) {
+			insertedIndex = frame->activeIndex;
+		}
+
+		if (insertedIndex < 0) {
 			return SLLCodeVariant::None;
 		}
 
@@ -115,15 +126,13 @@ namespace {
 		const bool isStartFrame = frame->message.find("Start add operation") != std::string::npos;
 		const int endIndex = isStartFrame ? currentSize : (currentSize - 1);
 
-		if (index == 0) {
+		if (insertedIndex == 0) {
 			return SLLCodeVariant::InsertFirst;
 		}
-		else if (index == endIndex) {
+		if (insertedIndex == endIndex) {
 			return SLLCodeVariant::InsertEnd;
 		}
-		else {
-			return SLLCodeVariant::InsertMiddle;
-		}
+		return SLLCodeVariant::InsertMiddle;
 	}
 
 	//Resolve delete pseudocode variant (first/end/middle) from current frame context.
@@ -133,18 +142,14 @@ namespace {
 			return SLLCodeVariant::None;
 		}
 
-		if (frame->message.find("Move head to next node") != std::string::npos
-			|| frame->message.find("Delete first") != std::string::npos
-			|| frame->message.find("Deleted first node") != std::string::npos) {
+		if (frame->message.find("Target is head") != std::string::npos
+			|| frame->message.find("Set head to target.next") != std::string::npos
+			|| frame->message.find("Delete old head node") != std::string::npos) {
 			return SLLCodeVariant::DeleteFirst;
 		}
 
 		if (activeLine == 5) {
 			return (frame->secondaryIndex < 0) ? SLLCodeVariant::DeleteEnd : SLLCodeVariant::DeleteMiddle;
-		}
-
-		if ((activeLine == 3 || activeLine == 4) && frame->activeIndex == 0) {
-			return SLLCodeVariant::DeleteFirst;
 		}
 
 		return SLLCodeVariant::None;
@@ -187,58 +192,58 @@ namespace {
 		}
 		switch (opType) {
 		case SLLOperationType::Add:
-			{
-				if (frame != nullptr && frame->message.find("Start add operation") != std::string::npos) {
-					addVariantLocked = false;
-				}
+		{
+			if (frame != nullptr && frame->message.find("Start add operation") != std::string::npos) {
+				addVariantLocked = false;
+			}
 
-				SLLCodeVariant variant = addVariantLocked ? lastAddVariant : detectAddVariant(frame, activeLine);
-				if (variant == SLLCodeVariant::None) {
-					variant = lastAddVariant;
-				}
-				else {
-					lastAddVariant = variant;
-					addVariantLocked = true;
-				}
-				if (variant == SLLCodeVariant::InsertFirst) {
-					codeArray = kInsertFirstCode;
-					lineCount = 5;
-				}
-				else if (variant == SLLCodeVariant::InsertEnd) {
-					codeArray = kInsertEndCode;
-					lineCount = 5;
-				}
-				else {
-					variant = SLLCodeVariant::InsertMiddle;
-					codeArray = kInsertMiddleCode;
-					lineCount = 5;
-				}
-				if (variantOut != nullptr) *variantOut = variant;
+			SLLCodeVariant variant = addVariantLocked ? lastAddVariant : detectAddVariant(frame, activeLine);
+			if (variant == SLLCodeVariant::None) {
+				variant = lastAddVariant;
 			}
-			break;
+			else {
+				lastAddVariant = variant;
+				addVariantLocked = true;
+			}
+			if (variant == SLLCodeVariant::InsertFirst) {
+				codeArray = kInsertFirstCode;
+				lineCount = 5;
+			}
+			else if (variant == SLLCodeVariant::InsertEnd) {
+				codeArray = kInsertEndCode;
+				lineCount = 5;
+			}
+			else {
+				variant = SLLCodeVariant::InsertMiddle;
+				codeArray = kInsertMiddleCode;
+				lineCount = 5;
+			}
+			if (variantOut != nullptr) *variantOut = variant;
+		}
+		break;
 		case SLLOperationType::Delete:
-			{
-				SLLCodeVariant variant = detectDeleteVariant(frame, activeLine);
-				if (variant == SLLCodeVariant::None) {
-					variant = lastDeleteVariant;
-				}
-				if (variant == SLLCodeVariant::DeleteFirst) {
-					codeArray = kDeleteFirstCode;
-					lineCount = 5;
-				}
-				else if (variant == SLLCodeVariant::DeleteEnd) {
-					codeArray = kDeleteEndCode;
-					lineCount = 5;
-				}
-				else {
-					variant = SLLCodeVariant::DeleteMiddle;
-					codeArray = kDeleteMiddleCode;
-					lineCount = 5;
-				}
-				lastDeleteVariant = variant;
-				if (variantOut != nullptr) *variantOut = variant;
+		{
+			SLLCodeVariant variant = detectDeleteVariant(frame, activeLine);
+			if (variant == SLLCodeVariant::None) {
+				variant = lastDeleteVariant;
 			}
-			break;
+			if (variant == SLLCodeVariant::DeleteFirst) {
+				codeArray = kDeleteFirstCode;
+				lineCount = 5;
+			}
+			else if (variant == SLLCodeVariant::DeleteEnd) {
+				codeArray = kDeleteEndCode;
+				lineCount = 5;
+			}
+			else {
+				variant = SLLCodeVariant::DeleteMiddle;
+				codeArray = kDeleteMiddleCode;
+				lineCount = 5;
+			}
+			lastDeleteVariant = variant;
+			if (variantOut != nullptr) *variantOut = variant;
+		}
+		break;
 		case SLLOperationType::Update:
 			codeArray = kUpdateCode;
 			lineCount = 3;
@@ -378,7 +383,7 @@ void SinglyLinkedListUI::draw() {
 		autoplay_ = true;
 		playbackMode_ = PlaybackMode::RunAtOnce;
 		singlyLinkedList.autoplayAccumulator = 0.0f;
-	};
+		};
 
 	int displayedCodeLine = displayFrame.codeLine;
 	SLLOperationType displayedOpType = displayFrame.operationType;
@@ -425,7 +430,7 @@ void SinglyLinkedListUI::draw() {
 			if (active) {
 				ImGui::PopStyleColor(2);
 			}
-		};
+			};
 
 		navButton("LINKED LIST", UIState::SinglyLinkedList, uiConfig.state == UIState::SinglyLinkedList);
 		navButton("TRIE", UIState::Trie, uiConfig.state == UIState::Trie);
@@ -565,7 +570,7 @@ void SinglyLinkedListUI::draw() {
 
 					ImGui::SameLine();
 					if (ImGui::Button("Browse File", ImVec2(110.0f, 0.0f))) {
-						std::string selectedPath = cr::utils::SimpleFileDialog::dialog(); 
+						std::string selectedPath = cr::utils::SimpleFileDialog::dialog();
 
 						if (!selectedPath.empty()) {
 							std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
@@ -668,7 +673,7 @@ void SinglyLinkedListUI::draw() {
 							static_cast<std::uint8_t>(std::clamp(col[3], 0.0f, 1.0f) * 255.0f)
 						);
 					}
-				};
+					};
 
 				editColor("Canvas", canvasBgColor_);
 				editColor("Node", nodeBaseColor_);
@@ -988,7 +993,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		head.setPoint(2, sf::Vector2f(toX - ux * 12.0f - px * 5.0f, toY - uy * 12.0f - py * 5.0f));
 		head.setFillColor(color);
 		window.draw(head);
-	};
+		};
 
 	auto drawNode = [&](float cx, float cy, int value, int index, sf::Color fill, std::uint8_t alpha = 255) {
 		sf::CircleShape node(radius);
@@ -1020,7 +1025,41 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			));
 			window.draw(indexText);
 		}
-	};
+		};
+
+	auto resolveInsertCurrentIndex = [&](const SLLFrame& visibleFrame) -> int {
+		if (visibleFrame.operationType != SLLOperationType::Add) {
+			return visibleFrame.activeIndex;
+		}
+
+		if (visibleFrame.codeLine == 2 || visibleFrame.codeLine == 3) {
+			return visibleFrame.activeIndex;
+		}
+
+		if (visibleFrame.codeLine == 4) {
+			if (visibleFrame.message.find("Set new node next") != std::string::npos) {
+				if (interpolation.isTransitioning &&
+					interpolation.previousFrame.operationType == SLLOperationType::Add &&
+					interpolation.previousFrame.codeLine == 3 &&
+					interpolation.previousFrame.activeIndex >= 0) {
+					return interpolation.previousFrame.activeIndex;
+				}
+				return visibleFrame.activeIndex > 0 ? visibleFrame.activeIndex - 1 : -1;
+			}
+			return visibleFrame.activeIndex;
+		}
+
+		if (visibleFrame.codeLine == 5) {
+			if (visibleFrame.message.find("Set prev->next to new node") != std::string::npos) {
+				return visibleFrame.activeIndex;
+			}
+			return visibleFrame.activeIndex;
+		}
+
+		return visibleFrame.activeIndex;
+		};
+
+	const int insertCurrentIndex = resolveInsertCurrentIndex(frame);
 
 	const bool addPrepareTransition = interpolation.isTransitioning &&
 		interpolation.previousFrame.operationType == SLLOperationType::Add &&
@@ -1068,7 +1107,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				return 0.0f;
 			}
 			return revealSpan * (static_cast<float>(idx) / static_cast<float>(nodeCount - 1));
-		};
+			};
 
 		for (std::size_t i = 0; i < frame.values.size(); ++i) {
 			const float cx = startX + static_cast<float>(i) * spacing;
@@ -1124,7 +1163,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				return (insertSlot == 0) ? frame.values.front() : frame.values.back();
 			}
 			return 0;
-		};
+			};
 		const int insertedValue = resolveInsertedValue();
 
 		for (std::size_t i = 0; i < frame.values.size(); ++i) {
@@ -1134,7 +1173,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			}
 
 			sf::Color fill = styleNodeColor;
-			if (static_cast<int>(i) == interpolation.previousFrame.activeIndex) {
+			if (static_cast<int>(i) == insertCurrentIndex) {
 				fill = styleActiveColor;
 			}
 			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
@@ -1148,13 +1187,25 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 
 		const float insertX = startX + static_cast<float>(insertSlot) * spacing;
 		const float insertY = centerY - 140.0f;
-		drawNode(insertX, insertY, insertedValue, insertSlot, styleActiveColor, static_cast<std::uint8_t>(255.0f * t));
+		drawNode(insertX, insertY, insertedValue, insertSlot, styleSecondaryColor, static_cast<std::uint8_t>(255.0f * t));
 	}
 	else if (addPrepareTransition || addPrepareStatic) {
-		const int insertedIndex = std::clamp(
-			frame.secondaryIndex >= 0 ? frame.secondaryIndex : (frame.activeIndex >= 0 ? frame.activeIndex + 1 : 0),
-			0,
-			static_cast<int>(frame.values.size()) - 1);
+		int insertedIndex = 0;
+		if (frame.message.find("Set new node next") != std::string::npos) {
+			insertedIndex = frame.activeIndex;
+		}
+		else if (frame.message.find("Set prev->next to new node") != std::string::npos) {
+			insertedIndex = frame.secondaryIndex;
+		}
+		else if (frame.activeIndex >= 0) {
+			insertedIndex = frame.activeIndex;
+		}
+		else if (frame.secondaryIndex >= 0) {
+			insertedIndex = frame.secondaryIndex;
+		}
+
+		insertedIndex = std::clamp(insertedIndex, 0, static_cast<int>(frame.values.size()) - 1);
+
 		const bool insertAtEnd = insertedIndex == static_cast<int>(frame.values.size()) - 1;
 		const float t = addPrepareTransition ? interpolation.transitionProgress : 1.0f;
 		const float gapT = t;
@@ -1167,7 +1218,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 					continue;
 				}
 				sf::Color fill = styleNodeColor;
-				if (i == frame.activeIndex) {
+				if (i == insertCurrentIndex) {
 					fill = styleActiveColor;
 				}
 				drawNode(cx, centerY, frame.values[i], i, fill);
@@ -1181,70 +1232,89 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 
 			const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
 			const float insertY = centerY - 120.0f;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
-
-			if (insertedIndex > 0) {
-				const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
-				drawArrow(prevX + radius, centerY, insertX - radius, centerY,
-					sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * connectT)));
-			}
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleSecondaryColor);
 		}
 		else {
 
 			auto addX = [&](int i) {
-			if (i < insertedIndex) {
-				return startX + static_cast<float>(i) * spacing;
-			}
-			if (i == insertedIndex) {
-				return startX + static_cast<float>(i) * spacing;
-			}
-			if (insertAtEnd) {
-				return startX + static_cast<float>(i - 1) * spacing;
-			}
-			return startX + (static_cast<float>(i) - 1.0f + gapT) * spacing;
-			};
+				if (i < insertedIndex) {
+					return startX + static_cast<float>(i) * spacing;
+				}
+				if (i == insertedIndex) {
+					return startX + static_cast<float>(i) * spacing;
+				}
+				if (insertAtEnd) {
+					return startX + static_cast<float>(i - 1) * spacing;
+				}
+				return startX + (static_cast<float>(i) - 1.0f + gapT) * spacing;
+				};
 
-		for (std::size_t i = 0; i < frame.values.size(); ++i) {
-			if (static_cast<int>(i) == insertedIndex) {
-				continue;
-			}
-			const float cx = addX(static_cast<int>(i));
-			if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
-				continue;
+			for (std::size_t i = 0; i < frame.values.size(); ++i) {
+				if (static_cast<int>(i) == insertedIndex) {
+					continue;
+				}
+				const float cx = addX(static_cast<int>(i));
+				if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
+					continue;
+				}
+
+				sf::Color fill = styleNodeColor;
+				if (static_cast<int>(i) == insertCurrentIndex) {
+					fill = styleActiveColor;
+				}
+				drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 			}
 
-			sf::Color fill = styleNodeColor;
-			if (static_cast<int>(i) == frame.activeIndex) {
-				fill = styleActiveColor;
-			}
-			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
-		}
+			for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
+				const int left = static_cast<int>(i);
+				const int right = static_cast<int>(i + 1);
 
-		for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
-			if (static_cast<int>(i) == insertedIndex || static_cast<int>(i + 1) == insertedIndex) {
-				continue;
+				// Skip arrows that involve the floating new node itself.
+				if (left == insertedIndex || right == insertedIndex) {
+					continue;
+				}
+
+				const float x0 = addX(left);
+				const float x1 = addX(right);
+				drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 			}
-			const float x0 = addX(static_cast<int>(i));
-			const float x1 = addX(static_cast<int>(i + 1));
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
-		}
+
+			// Keep the old temp -> next connection during line 4
+			if (insertedIndex > 0 && insertedIndex + 1 < static_cast<int>(frame.values.size())) {
+				const float prevX = addX(insertedIndex - 1);
+				const float nextX = addX(insertedIndex + 1);
+				drawArrow(prevX + radius, centerY, nextX - radius, centerY, styleEdgeColor);
+			}
 
 			const float insertX = addX(insertedIndex);
 			const float insertY = centerY - 135.0f;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleSecondaryColor);
 
-			if (insertedIndex > 0) {
-				const float prevX = addX(insertedIndex - 1);
-				drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY,
+			if (insertedIndex + 1 < static_cast<int>(frame.values.size())) {
+				const float nextX = addX(insertedIndex + 1);
+				drawArrow(insertX + radius * 0.6f, insertY, nextX - radius, centerY,
 					sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * connectT)));
 			}
 		}
 	}
 	else if (addFinalizeTransition) {
-		const int insertedIndex = std::clamp(
-			interpolation.previousFrame.secondaryIndex >= 0 ? interpolation.previousFrame.secondaryIndex : frame.activeIndex,
-			0,
-			static_cast<int>(frame.values.size()) - 1);
+		int insertedIndex = frame.activeIndex;
+
+		if (interpolation.previousFrame.message.find("Set new node next") != std::string::npos) {
+			insertedIndex = interpolation.previousFrame.activeIndex;
+		}
+		else if (interpolation.previousFrame.message.find("Set prev->next to new node") != std::string::npos) {
+			insertedIndex = interpolation.previousFrame.secondaryIndex;
+		}
+		else if (interpolation.previousFrame.activeIndex >= 0) {
+			insertedIndex = interpolation.previousFrame.activeIndex;
+		}
+		else if (frame.activeIndex >= 0) {
+			insertedIndex = frame.activeIndex;
+		}
+
+		insertedIndex = std::clamp(insertedIndex, 0, static_cast<int>(frame.values.size()) - 1);
+
 		const bool insertAtEnd = insertedIndex == static_cast<int>(frame.values.size()) - 1;
 		const float t = interpolation.transitionProgress;
 		const float smoothT = t * t * (3.0f - 2.0f * t);
@@ -1255,7 +1325,8 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 				if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
 					continue;
 				}
-				drawNode(cx, centerY, frame.values[i], i, styleNodeColor);
+				sf::Color fill = (i == insertCurrentIndex) ? styleActiveColor : styleNodeColor;
+				drawNode(cx, centerY, frame.values[i], i, fill);
 			}
 
 			for (int i = 0; i + 1 < insertedIndex; ++i) {
@@ -1267,7 +1338,7 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
 			const float startY = centerY - 120.0f;
 			const float insertY = startY + (centerY - startY) * smoothT;
-			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleSecondaryColor);
 
 			if (insertedIndex > 0) {
 				const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
@@ -1276,47 +1347,54 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		}
 		else {
 
-		for (std::size_t i = 0; i < frame.values.size(); ++i) {
-			if (static_cast<int>(i) == insertedIndex) {
-				continue;
-			}
-			const float cx = startX + static_cast<float>(i) * spacing;
-			if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
-				continue;
+			for (std::size_t i = 0; i < frame.values.size(); ++i) {
+				if (static_cast<int>(i) == insertedIndex) {
+					continue;
+				}
+				const float cx = startX + static_cast<float>(i) * spacing;
+				if (cx + radius < 0.0f || cx - radius > static_cast<float>(size.x)) {
+					continue;
+				}
+
+				sf::Color fill = styleNodeColor;
+				drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
 			}
 
-			sf::Color fill = styleNodeColor;
-			drawNode(cx, centerY, frame.values[i], static_cast<int>(i), fill);
-		}
-
-		for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
-			if (static_cast<int>(i) == insertedIndex || static_cast<int>(i + 1) == insertedIndex) {
-				continue;
+			for (std::size_t i = 0; i + 1 < frame.values.size(); ++i) {
+				if (static_cast<int>(i) == insertedIndex || static_cast<int>(i + 1) == insertedIndex) {
+					continue;
+				}
+				const float x0 = startX + static_cast<float>(i) * spacing;
+				const float x1 = startX + static_cast<float>(i + 1) * spacing;
+				drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
 			}
-			const float x0 = startX + static_cast<float>(i) * spacing;
-			const float x1 = startX + static_cast<float>(i + 1) * spacing;
-			drawArrow(x0 + radius, centerY, x1 - radius, centerY, styleEdgeColor);
-		}
 
-		const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
-		const float startY = centerY - (insertAtEnd ? 120.0f : 135.0f);
-		const float insertY = startY + (centerY - startY) * smoothT;
-		drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
+			const float insertX = startX + static_cast<float>(insertedIndex) * spacing;
+			const float startY = centerY - (insertAtEnd ? 120.0f : 135.0f);
+			const float insertY = startY + (centerY - startY) * smoothT;
+			drawNode(insertX, insertY, frame.values[insertedIndex], insertedIndex, styleActiveColor);
 
-		if (insertedIndex > 0) {
-			const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
-			if (insertAtEnd) {
-				drawArrow(prevX + radius, centerY, insertX - radius, centerY, styleEdgeColor);
+			if (insertedIndex > 0) {
+				const float prevX = startX + static_cast<float>(insertedIndex - 1) * spacing;
+				const sf::Color rewiredColor(
+					styleEdgeColor.r,
+					styleEdgeColor.g,
+					styleEdgeColor.b,
+					static_cast<std::uint8_t>(255.0f * t)
+				);
+
+				if (insertAtEnd) {
+					drawArrow(prevX + radius, centerY, insertX - radius, centerY, rewiredColor);
+				}
+				else {
+					drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY, rewiredColor);
+				}
 			}
-			else {
-				drawArrow(prevX + radius, centerY, insertX - radius * 0.6f, insertY, styleEdgeColor);
+			if (insertedIndex + 1 < static_cast<int>(frame.values.size())) {
+				const float nextX = startX + static_cast<float>(insertedIndex + 1) * spacing;
+				drawArrow(insertX + radius * 0.6f, insertY, nextX - radius, centerY,
+					sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * t)));
 			}
-		}
-		if (insertedIndex + 1 < static_cast<int>(frame.values.size())) {
-			const float nextX = startX + static_cast<float>(insertedIndex + 1) * spacing;
-			drawArrow(insertX + radius * 0.6f, insertY, nextX - radius, centerY,
-				sf::Color(styleEdgeColor.r, styleEdgeColor.g, styleEdgeColor.b, static_cast<std::uint8_t>(255.0f * t)));
-		}
 		}
 	}
 	else if (deleteTransition) {
@@ -1326,9 +1404,9 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 			static_cast<int>(interpolation.previousFrame.values.size()) - 1);
 		const bool deleteAtEnd = deletedIndex == static_cast<int>(interpolation.previousFrame.values.size()) - 1;
 		const float t = interpolation.transitionProgress;
-		const float fadeT = std::clamp(t / (deleteAtEnd ? 0.55f : 0.35f), 0.0f, 1.0f);
-		const float reconnectT = std::clamp((t - (deleteAtEnd ? 0.45f : 0.35f)) / 0.30f, 0.0f, 1.0f);
-		const float shiftT = deleteAtEnd ? 0.0f : std::clamp((t - 0.65f) / 0.35f, 0.0f, 1.0f);
+		const float reconnectT = std::clamp(t / 0.35f, 0.0f, 1.0f);
+		const float fadeT = std::clamp((t - 0.45f) / 0.30f, 0.0f, 1.0f);
+		const float shiftT = deleteAtEnd ? 0.0f : std::clamp((t - 0.70f) / 0.30f, 0.0f, 1.0f);
 
 		for (std::size_t i = 0; i < interpolation.previousFrame.values.size(); ++i) {
 			float cx = startX + static_cast<float>(i) * spacing;
@@ -1407,21 +1485,39 @@ void SinglyLinkedListUI::drawSfml(sf::RenderWindow& window)
 		}
 	}
 
-	if (frame.activeIndex >= 0) {
-		float fromX = startX + static_cast<float>(frame.activeIndex) * spacing;
-		if (interpolation.isTransitioning && interpolation.previousFrame.activeIndex >= 0) {
-			fromX = startX + static_cast<float>(interpolation.previousFrame.activeIndex) * spacing;
-		}
-		const float toX = startX + static_cast<float>(frame.activeIndex) * spacing;
-		const float markerX = interpolation.isTransitioning ? lerp(fromX, toX, interpolation.transitionProgress) : toX;
+	{
+		int ringTargetIndex = frame.activeIndex;
 
-		sf::CircleShape ring(radius + 8.0f);
-		ring.setOrigin(sf::Vector2f(radius + 8.0f, radius + 8.0f));
-		ring.setPosition(sf::Vector2f(markerX, centerY));
-		ring.setFillColor(sf::Color::Transparent);
-		ring.setOutlineThickness(3.0f);
-		ring.setOutlineColor(highlightRingColor_);
-		window.draw(ring);
+		if (frame.operationType == SLLOperationType::Add &&
+			(addCreateTransition || addCreateStatic ||
+				addPrepareTransition || addPrepareStatic ||
+				addFinalizeTransition)) {
+			ringTargetIndex = insertCurrentIndex;
+		}
+
+		if (ringTargetIndex >= 0) {
+			const float dt = ImGui::GetIO().DeltaTime;
+			const float targetX = startX + static_cast<float>(ringTargetIndex) * spacing;
+
+			static float ringVisualX = 0.0f;
+			static bool ringInitialized = false;
+
+			if (!ringInitialized) {
+				ringVisualX = targetX;
+				ringInitialized = true;
+			}
+
+			const float chaseT = 1.0f - std::exp(-14.0f * dt);
+			ringVisualX = lerp(ringVisualX, targetX, chaseT);
+
+			sf::CircleShape ring(radius + 8.0f);
+			ring.setOrigin(sf::Vector2f(radius + 8.0f, radius + 8.0f));
+			ring.setPosition(sf::Vector2f(ringVisualX, centerY));
+			ring.setFillColor(sf::Color::Transparent);
+			ring.setOutlineThickness(3.0f);
+			ring.setOutlineColor(highlightRingColor_);
+			window.draw(ring);
+		}
 	}
 
 }
@@ -1438,13 +1534,13 @@ namespace {
 	{
 		if (from.operationType == SLLOperationType::Add && to.operationType == SLLOperationType::Add) {
 			if (from.codeLine == 2 && to.codeLine == 3) {
-				return 0.90f; // Create new node above list
+				return 0.80f; // create new node above list
 			}
 			if (from.codeLine == 3 && to.codeLine == 4) {
-				return 1.05f; // Open gap and connect prev -> new
+				return 0.78f; // connect newNode -> next
 			}
 			if (from.codeLine == 4 && to.codeLine == 5) {
-				return 0.95f; // Connect new -> next and settle
+				return 1.10f; // rewire prev/head -> newNode and settle
 			}
 		}
 
@@ -1454,10 +1550,10 @@ namespace {
 
 		if (from.operationType == SLLOperationType::Delete && to.operationType == SLLOperationType::Delete &&
 			from.codeLine == 4 && to.codeLine == 5) {
-			return 0.95f;
+			return 1.00f;
 		}
 
-		return 0.45f;
+		return 0.42f;
 	}
 }
 
@@ -1631,26 +1727,44 @@ void SinglyLinkedList::addAtViz(std::size_t index, int value)
 	pushFrame(-1, static_cast<int>(index), 1, "Start add operation", SLLOperationType::Add);
 
 	for (std::size_t i = 0; i < index; ++i) {
-		pushFrame(static_cast<int>(i), -1, 2, "Traverse to insertion position", SLLOperationType::Add);
+		pushFrame(static_cast<int>(i), static_cast<int>(index), 2, "Traverse to insertion position", SLLOperationType::Add);
 	}
-	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
-		"Create new node with value", SLLOperationType::Add);
+
+	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1),
+		static_cast<int>(index),
+		3,
+		"Create new node with value",
+		SLLOperationType::Add);
 
 	addAt(index, value);
 
 	if (index == 0) {
-		pushFrame(0, 0, 4,
-			"Set head to new node", SLLOperationType::Add);
+		pushFrame(static_cast<int>(index),
+			(index + 1 < values.size()) ? static_cast<int>(index + 1) : -1,
+			4,
+			"Set new node next to head",
+			SLLOperationType::Add);
+
+		pushFrame(0, 0, 5, "Set head to new node", SLLOperationType::Add);
+	}
+	else if (index == values.size() - 1) {
+		pushFrame(static_cast<int>(index), -1, 4, "Set new node next to null", SLLOperationType::Add);
+		pushFrame(static_cast<int>(index - 1), static_cast<int>(index), 5, "Set prev->next to new node", SLLOperationType::Add);
 	}
 	else {
-		pushFrame(static_cast<int>(index - 1), static_cast<int>(index), 4,
-			"Set prev->next to new node", SLLOperationType::Add);
+		pushFrame(static_cast<int>(index),
+			static_cast<int>(index + 1),
+			4,
+			"Set new node next to temp.next",
+			SLLOperationType::Add);
+
+		pushFrame(static_cast<int>(index - 1),
+			static_cast<int>(index),
+			5,
+			"Set prev->next to new node",
+			SLLOperationType::Add);
 	}
 
-	pushFrame(static_cast<int>(index),
-		(index + 1 < values.size()) ? static_cast<int>(index + 1) : -1,
-		5,
-		"Set new node next pointer", SLLOperationType::Add);
 	commitTimeline("Add complete");
 }
 
@@ -1671,27 +1785,74 @@ void SinglyLinkedList::deleteAtViz(std::size_t index)
 	timeline.clear();
 	pushFrame(-1, -1, 1, "Start delete operation", SLLOperationType::Delete);
 
-	for (std::size_t i = 0; i <= index; ++i) {
-		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Delete);
+	for (std::size_t i = 0; i < index; ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "Traverse to node before target", SLLOperationType::Delete);
 	}
-	pushFrame(index == 0 ? -1 : static_cast<int>(index - 1), static_cast<int>(index), 3,
-		"Target node selected", SLLOperationType::Delete);
 
-	int nextIndexBeforeErase = (index + 1 < values.size()) ? static_cast<int>(index + 1) : -1;
-	pushFrame(static_cast<int>(index), nextIndexBeforeErase, 4,
-		"Remove target node", SLLOperationType::Delete);
-
-	deleteAt(index);
-	
-	int prevIndexAfterErase = (index == 0) ? -1 : static_cast<int>(index - 1);
-	int nextIndexAfterErase = (index < values.size()) ? static_cast<int>(index) : -1;
 	if (index == 0) {
-		pushFrame(nextIndexAfterErase, -1, 5, "Move head to next node", SLLOperationType::Delete);
+		pushFrame(0,
+			(values.size() > 1) ? 1 : -1,
+			3,
+			"Target is head",
+			SLLOperationType::Delete);
+
+		pushFrame(0,
+			(values.size() > 1) ? 1 : -1,
+			4,
+			"Set head to target.next",
+			SLLOperationType::Delete);
+
+		deleteAt(index);
+
+		pushFrame(values.empty() ? -1 : 0,
+			-1,
+			5,
+			"Delete old head node",
+			SLLOperationType::Delete);
+	}
+	else if (index == values.size() - 1) {
+		pushFrame(static_cast<int>(index),
+			-1,
+			3,
+			"Set target = temp.next",
+			SLLOperationType::Delete);
+
+		pushFrame(static_cast<int>(index),
+			-1,
+			4,
+			"Set temp.next to null",
+			SLLOperationType::Delete);
+
+		deleteAt(index);
+
+		pushFrame(static_cast<int>(index - 1),
+			-1,
+			5,
+			"Delete target node",
+			SLLOperationType::Delete);
 	}
 	else {
-		pushFrame(prevIndexAfterErase, nextIndexAfterErase, 5,
-			"Set prev->next to node after deleted", SLLOperationType::Delete);
+		pushFrame(static_cast<int>(index),
+			static_cast<int>(index - 1),
+			3,
+			"Set target = temp.next",
+			SLLOperationType::Delete);
+
+		pushFrame(static_cast<int>(index),
+			static_cast<int>(index + 1),
+			4,
+			"Set temp.next to target.next",
+			SLLOperationType::Delete);
+
+		deleteAt(index);
+
+		pushFrame(static_cast<int>(index - 1),
+			static_cast<int>(index),
+			5,
+			"Delete target node",
+			SLLOperationType::Delete);
 	}
+
 	commitTimeline("Delete complete");
 }
 
@@ -1708,11 +1869,11 @@ void SinglyLinkedList::updateAtViz(std::size_t index, int value)
 	pushFrame(-1, -1, 1, "Start update operation", SLLOperationType::Update);
 
 	for (std::size_t i = 0; i <= index; ++i) {
-		pushFrame(static_cast<int>(i), -1, 2, "Traverse to target node", SLLOperationType::Update);
+		pushFrame(static_cast<int>(i), -1, 2, "FOR loop: move current to target position", SLLOperationType::Update);
 	}
 
 	updateAt(index, value);
-	pushFrame(static_cast<int>(index), -1, 3, "Updated node value", SLLOperationType::Update);
+	pushFrame(static_cast<int>(index), -1, 3, "Set current.data = new value", SLLOperationType::Update);
 	commitTimeline("Update complete");
 }
 
@@ -1723,14 +1884,15 @@ void SinglyLinkedList::searchValueViz(int value)
 	pushFrame(-1, -1, 1, "Start search operation", SLLOperationType::Search);
 
 	for (std::size_t i = 0; i < values.size(); ++i) {
+		pushFrame(static_cast<int>(i), -1, 2, "FOR loop: visit next node", SLLOperationType::Search);
+
 		if (values[i] == value) {
-			pushFrame(static_cast<int>(i), -1, 3, "Value found", SLLOperationType::Search);
+			pushFrame(static_cast<int>(i), -1, 3, "IF current.data == target", SLLOperationType::Search);
 			commitTimeline("Search complete: found");
 			return;
 		}
-		pushFrame(static_cast<int>(i), -1, 2, "Compare current node", SLLOperationType::Search);
 	}
 
-	pushFrame(-1, -1, 4, "Value not found", SLLOperationType::Search);
+	pushFrame(-1, -1, 4, "Reached null -> value not found", SLLOperationType::Search);
 	commitTimeline("Search complete: not found");
 }
