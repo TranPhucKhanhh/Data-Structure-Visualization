@@ -31,16 +31,11 @@ namespace {
 
 		if (!attempted) {
 			attempted = true;
-			const std::filesystem::path candidates[] = {
-				std::filesystem::path("../_deps/imgui-src/misc/fonts/DroidSans.ttf"),
-				std::filesystem::path("../_deps/imgui-src/misc/fonts/Roboto-Medium.ttf"),
-				std::filesystem::path("C:/Windows/Fonts/arial.ttf")
-			};
-
-			for (const auto& path : candidates) {
+			const std::string font_name = "/DroidSans.ttf";
+			const auto path = std::filesystem::path(std::string(ASSET_FONT + font_name));
+			if (std::filesystem::exists(path)) {
 				if (font.openFromFile(path)) {
 					loaded = true;
-					break;
 				}
 			}
 		}
