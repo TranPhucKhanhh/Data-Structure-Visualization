@@ -20,7 +20,7 @@ namespace {
 		const std::string font_name = "/Roboto_Condensed-Regular.ttf";
 		const auto path = std::filesystem::path(std::string(ASSET_FONT + font_name));
 		if (std::filesystem::exists(path)) {
-			return path;
+			return path;	
 		}
 	
 		std::cerr << "Warning: Font file not found at " << path << std::endl;
@@ -44,6 +44,7 @@ namespace {
 		}
 		else if (uiConfig.state == UIState::ShortestPath) {
 			shortest_path_ui.draw();
+			shortest_path_ui.drawSfml(window);
 		}
 		else if (uiConfig.state == UIState::SinglyLinkedList) {
 			singly_linked_list_ui.draw();
