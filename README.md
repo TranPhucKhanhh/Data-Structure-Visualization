@@ -1,114 +1,157 @@
-# CMake SFML Project Template
+# Data Structure Visualization
 
-This repository template should allow for a fast and hassle-free kick start of your next SFML project using CMake.
-Thanks to [GitHub's nature of templates](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template), you can fork this repository without inheriting its Git history.
+An interactive desktop application for visualizing data structures and algorithms through animated playback, highlighted states, and step-by-step execution.
 
-The template starts out very basic, but might receive additional features over time:
+## Team
 
-- Basic CMake script to build your project and link SFML on any operating system
-- Basic [GitHub Actions](https://github.com/features/actions) script for all major platforms
+This project was created for **CS163 - Data Structures and Algorithms** at **HCMUS** by:
 
-## Quick start
+- Trần Phúc Khánh - 25125020
+- Lê Hồng Đăng - 25125040
+- Phạm Gia Bảo - 25125080
+- Lương Nhật Minh - 25125088
 
-### Command line
+## Overview
 
-1. Install [Git](https://git-scm.com/downloads) and [CMake](https://cmake.org/download/). Use your system's package manager if available.
-2. Follow [GitHub's instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for how to use their project template feature to create your own project. If you don't want to use GitHub, see the section below.
-3. Clone your new GitHub repo and open the repo in your text editor of choice.
-4. Open [CMakeLists.txt](CMakeLists.txt). Rename the project and the target name of the executable to whatever name you want. Make sure to change all occurrences.
-5. If you want to add or remove any .cpp files, change the source files listed in the `add_executable` call in CMakeLists.txt to match the source files your project requires. If you plan on keeping the default main.cpp file then no changes are required.
-6. If your code uses the Audio or Network modules then add `SFML::Audio` or `SFML::Network` to the `target_link_libraries` call alongside the existing `SFML::Graphics` library that is being linked.
-7. If you use Linux, install SFML's dependencies using your system package manager. On Ubuntu and other Debian-based distributions you can use the following commands:
-   ```
-   sudo apt update
-   sudo apt install \
-       libxrandr-dev \
-       libxcursor-dev \
-       libxi-dev \
-       libudev-dev \
-       libfreetype-dev \
-       libflac-dev \
-       libvorbis-dev \
-       libgl1-mesa-dev \
-       libegl1-mesa-dev \
-       libfreetype-dev
-   ```
-8. Configure and build your project. Most popular IDEs support CMake projects with very little effort on your part.
+The goal of this project is to make core data structures and graph algorithms easier to understand by showing how each operation changes the internal state over time.
 
-   - [VS Code](https://code.visualstudio.com) via the [CMake extension](https://code.visualstudio.com/docs/cpp/cmake-linux)
-   - [Visual Studio](https://docs.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio?view=msvc-170)
-   - [CLion](https://www.jetbrains.com/clion/features/cmake-support.html)
-   - [Qt Creator](https://doc.qt.io/qtcreator/creator-project-cmake.html)
+The application is built with:
 
-   Using CMake from the command line is straightforward as well.
-   Be sure to run these commands in the root directory of the project you just created.
+- **C++17**
+- **SFML 3**
+- **Dear ImGui**
+- **ImGui-SFML**
+- **CMake**
 
-   ```
-   cmake -B build
-   cmake --build build
-   ```
+It provides a desktop UI where users can switch between modules, input data manually or from files, and watch operations unfold visually.
 
-9. Enjoy!
+## Implemented Modules
 
-### Visual Studio
+### Trie
 
-Using a Visual Studio workspace is the simplest way to get started on windows.
+The trie visualizer supports:
 
-1. Ensure you have the [required components installed](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio#installation).
-2. Follow [GitHub's instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for how to use their project template feature to create your own project.
-3. If you have already cloned this repo, you can [open the folder](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio0#ide-integration).
-4. If not, you can [clone it directly in Visual Studio](https://learn.microsoft.com/en-us/visualstudio/get-started/tutorial-open-project-from-repo).
+- Initialize from a list of words
+- Initialize from file
+- Insert a word
+- Search for a word
+- Delete a word
+- Update a word
 
-Visual Studio should automatically configure the CMake project, then you can build and run as normal through Visual Studio. See the links above for more details.
+### Heap
 
-## Upgrading SFML
+The heap visualizer supports:
 
-SFML is found via CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module.
-FetchContent automatically downloads SFML from GitHub and builds it alongside your own code.
-Beyond the convenience of not having to install SFML yourself, this ensures ABI compatibility and simplifies things like specifying static versus shared libraries.
+- Initialize from a list
+- Initialize from file
+- Generate random input
+- Insert a value
+- Search for a value
+- Delete the top node
+- Update a value
+- Switch between min-heap and max-heap
 
-Modifying what version of SFML you want is as easy as changing the `GIT_TAG` argument.
-Currently it uses SFML 3 via the `3.0.2` tag.
+### Singly Linked List
 
-## But I want to...
+The singly linked list visualizer supports:
 
-Modify CMake options by adding them as configuration parameters (with a `-D` flag) or by modifying the contents of CMakeCache.txt and rebuilding.
+- Initialize random data
+- Initialize from a user-defined list
+- Initialize from text file
+- Add at index
+- Delete at index
+- Update at index
+- Search by value
 
-### Not use GitHub
+### Shortest Path
 
-You can use this project without a GitHub account by [downloading the contents](https://github.com/SFML/cmake-sfml-project/archive/refs/heads/master.zip) of the repository as a ZIP archive and unpacking it locally.
-This approach also avoids using Git entirely if you would prefer to not do that.
+The shortest path visualizer supports:
 
-### Change Compilers
+- Graph input using weighted edges
+- Dijkstra shortest path execution
+- Step-by-step playback
+- Visual highlighting of nodes, relaxed edges, and final path
 
-See the variety of [`CMAKE_<LANG>_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html) options.
-In particular you'll want to modify `CMAKE_CXX_COMPILER` to point to the C++ compiler you wish to use.
+## Main Features
 
-### Change Compiler Optimizations
+- Interactive menu-based desktop interface
+- Step-by-step and run-at-once playback modes
+- Animated transitions between algorithm states
+- Visual highlighting of active and affected nodes
+- Zooming and panning on visualization canvases
+- Operation, comment, and code panels
+- File input support through a simple file dialog
+- Custom font loading from the local `fonts/` folder
 
-CMake abstracts away specific optimizer flags through the [`CMAKE_BUILD_TYPE`](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html) option.
-By default this project recommends `Release` builds which enable optimizations.
-Other build types include `Debug` builds which enable debug symbols but disable optimizations.
-If you're using a multi-configuration generator (as is often the case on Windows), you can modify the [`CMAKE_CONFIGURATION_TYPES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CONFIGURATION_TYPES.html#variable:CMAKE_CONFIGURATION_TYPES) option.
+## Project Structure
 
-### Change Generators
+```text
+data-visualize/
+|-- include/
+|   |-- logic/      # Core algorithm and data structure declarations
+|   |-- ui/         # UI declarations for each module
+|   `-- utils/      # Utility headers
+|-- src/
+|   |-- logic/      # Logic implementations
+|   |-- ui/         # Rendering and interaction implementations
+|   `-- utils/      # Utility implementations
+|-- fonts/          # Font assets used by the UI
+|-- .github/
+|   `-- workflows/  # CI pipeline
+|-- CMakeLists.txt
+`-- README.md
+```
 
-While CMake will attempt to pick a suitable default generator, some systems offer a number of generators to choose from.
-Ubuntu, for example, offers Makefiles and Ninja as two potential options.
-For a list of generators, click [here](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html).
-To modify the generator you're using you must reconfigure your project providing a `-G` flag with a value corresponding to the generator you want.
-You can't simply modify an entry in the CMakeCache.txt file unlike the above options.
-Then you may rebuild your project with this new generator.
+## Architecture
 
-## More Reading
+The project is split into two main layers:
 
-Here are some useful resources if you want to learn more about CMake:
+- `logic` contains the underlying data structures and algorithm implementations.
+- `ui` contains the ImGui panels and SFML drawing code used to animate and render each module.
 
-- [Official CMake Tutorial](https://cmake.org/cmake/help/latest/guide/tutorial/)
-- [How to Use CMake Without the Agonizing Pain - Part 1](https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-1.html)
-- [How to Use CMake Without the Agonizing Pain - Part 2](https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-2.html)
-- [Better CMake YouTube series by Jefferon Amstutz](https://www.youtube.com/playlist?list=PL8i3OhJb4FNV10aIZ8oF0AA46HgA2ed8g)
+Most modules expose operation timelines or instruction sequences so the UI can replay each algorithm step visually instead of only showing the final result.
+
+## Build Instructions
+
+### Requirements
+
+- A C++17-compatible compiler
+- [CMake 3.28+](https://cmake.org/download/)
+- Git
+
+### Build
+
+From the project root, run:
+
+```bash
+cmake -B build
+cmake --build build --config Release
+```
+
+### Run
+
+After building, run the generated `DataVisualization` executable from the build output directory.
+
+## Dependencies
+
+Project dependencies are fetched automatically through CMake using `FetchContent`.
+
+The main dependencies are:
+
+- [SFML](https://github.com/SFML/SFML)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [ImGui-SFML](https://github.com/SFML/imgui-sfml)
+
+## Continuous Integration
+
+This repository includes a GitHub Actions workflow that builds the project on:
+
+- Windows
+- Linux
+- macOS (File browser does not support macOS)
+
+The CI pipeline also checks both shared and static configurations.
 
 ## License
 
-The source code is dual licensed under Public Domain and MIT -- choose whichever you prefer.
+See [LICENSE.md](LICENSE.md) for license details.
