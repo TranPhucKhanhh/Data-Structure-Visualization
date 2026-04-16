@@ -17,17 +17,19 @@
 #include <unordered_set>
 #include <vector>
 
+#include "utils/SimpleFileDialog.h"
+
 namespace {
-	struct SPVisualState {
-		std::vector<int> distances;
-		std::vector<int> parent;
-		std::vector<bool> settled;
-		std::vector<bool> inPath;
-		int activeNode = -1;
-		int relaxU = -1;
-		int relaxV = -1;
-		bool noPath = false;
-	};
+//	struct SPVisualState {
+//		std::vector<int> distances;
+//		std::vector<int> parent;
+//		std::vector<bool> settled;
+//		std::vector<bool> inPath;
+//		int activeNode = -1;
+//		int relaxU = -1;
+//		int relaxV = -1;
+//		bool noPath = false;
+//	};
 
 	float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
@@ -205,57 +207,57 @@ namespace {
 		return edges;
 	}
 
-	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
-		std::random_device rd;
-		std::mt19937 rng(rd());
-		std::uniform_int_distribution<int> vertexDist(5, 10);
-		std::uniform_int_distribution<int> weightDist(1, 20);
-
-		vertexCount = vertexDist(rng);
-		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
-		const int minEdges = vertexCount - 1;
-		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
-		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
-		const int targetEdges = edgeDist(rng);
-
-		std::vector<std::array<int, 3>> edges;
-		edges.reserve(static_cast<std::size_t>(targetEdges));
-		std::set<std::pair<int, int>> used;
-
-		std::vector<int> order(static_cast<std::size_t>(vertexCount));
-		for (int i = 0; i < vertexCount; ++i) {
-			order[static_cast<std::size_t>(i)] = i;
-		}
-		std::shuffle(order.begin(), order.end(), rng);
-
-		for (int i = 1; i < vertexCount; ++i) {
-			const int u = order[static_cast<std::size_t>(i)];
-			std::uniform_int_distribution<int> parentDist(0, i - 1);
-			const int v = order[static_cast<std::size_t>(parentDist(rng))];
-			const int a = std::min(u, v);
-			const int b = std::max(u, v);
-			used.insert({ a, b });
-			edges.push_back({ u, v, weightDist(rng) });
-		}
-
-		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
-		while (static_cast<int>(edges.size()) < targetEdges) {
-			const int u = nodeDist(rng);
-			const int v = nodeDist(rng);
-			if (u == v) {
-				continue;
-			}
-			const int a = std::min(u, v);
-			const int b = std::max(u, v);
-			if (used.find({ a, b }) != used.end()) {
-				continue;
-			}
-			used.insert({ a, b });
-			edges.push_back({ u, v, weightDist(rng) });
-		}
-
-		return edges;
-	}
+//	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
+//		std::random_device rd;
+//		std::mt19937 rng(rd());
+//		std::uniform_int_distribution<int> vertexDist(5, 10);
+//		std::uniform_int_distribution<int> weightDist(1, 20);
+//
+//		vertexCount = vertexDist(rng);
+//		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
+//		const int minEdges = vertexCount - 1;
+//		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
+//		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
+//		const int targetEdges = edgeDist(rng);
+//
+//		std::vector<std::array<int, 3>> edges;
+//		edges.reserve(static_cast<std::size_t>(targetEdges));
+//		std::set<std::pair<int, int>> used;
+//
+//		std::vector<int> order(static_cast<std::size_t>(vertexCount));
+//		for (int i = 0; i < vertexCount; ++i) {
+//			order[static_cast<std::size_t>(i)] = i;
+//		}
+//		std::shuffle(order.begin(), order.end(), rng);
+//
+//		for (int i = 1; i < vertexCount; ++i) {
+//			const int u = order[static_cast<std::size_t>(i)];
+//			std::uniform_int_distribution<int> parentDist(0, i - 1);
+//			const int v = order[static_cast<std::size_t>(parentDist(rng))];
+//			const int a = std::min(u, v);
+//			const int b = std::max(u, v);
+//			used.insert({ a, b });
+//			edges.push_back({ u, v, weightDist(rng) });
+//		}
+//
+//		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
+//		while (static_cast<int>(edges.size()) < targetEdges) {
+//			const int u = nodeDist(rng);
+//			const int v = nodeDist(rng);
+//			if (u == v) {
+//				continue;
+//			}
+//			const int a = std::min(u, v);
+//			const int b = std::max(u, v);
+//			if (used.find({ a, b }) != used.end()) {
+//				continue;
+//			}
+//			used.insert({ a, b });
+//			edges.push_back({ u, v, weightDist(rng) });
+//		}
+//
+//		return edges;
+//	}
 
 	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges) {
 		std::ostringstream oss;
@@ -597,7 +599,7 @@ void ShortestPathUI::draw() {
 				ImGui::TextWrapped("Enter each edge as three numbers: u v w. Example: 0 1 4");
 				ImGui::InputTextMultiline("##SPEdgeInput", edgeInput_.data(), edgeInput_.size(), ImVec2(-1.0f, 108.0f));
 				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f, 0.0f))) {
-					graphEdges_ = buildRandomPositiveGraph(vertexCount_);
+					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
 					edgeCount_ = static_cast<int>(graphEdges_.size());
 					const std::string generatedText = edgesToInputText(graphEdges_);
 					std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", generatedText.c_str());
@@ -611,6 +613,51 @@ void ShortestPathUI::draw() {
 					startInitializeAnimation();
 					resetTimeline();
 				}
+
+
+                //Update the File Browser button for Shortest Path
+				if (ImGui::Button("Browse File", ImVec2(120.0f, 0.0f)))
+                {
+                    std::string selected_path = cr::utils::SimpleFileDialog::dialog();
+                    if (!selected_path.empty())
+                    {
+                        std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selected_path.c_str());
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Load from File", ImVec2(120.0f, 0.0f)))
+                {
+                    std::cerr << "0\n";
+                    statusMessage_ = shortestPath.initFromFile(txtPath_.data());
+                    std::cerr << "1\n";
+                    if (statusMessage_.find("Success") != std::string::npos)
+                    {
+                        vertexCount_ = shortestPath.num_vertices;
+                        graphLoaded_ = true;
+
+                        std::ifstream file_reader(txtPath_.data());
+                        std::string content((std::istreambuf_iterator<char>(file_reader)), std::istreambuf_iterator<char>());
+                        std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", content.c_str());
+
+                        resultMessage_ = "Graph loaded from file. Ready to run Dijkstra.";
+
+                        startNode_ = std::clamp(startNode_, 0, std::max(0, vertexCount_ - 1));
+                        endNode_ = std::clamp(endNode_, 0, std::max(0, vertexCount_ - 1));
+
+                        startInitializeAnimation();
+                    }
+                    else
+                    {
+                        graphLoaded_ = false;
+                        resultMessage_ = "Error: Failed to load graph. Please check the file format.";
+                        initializeAnimating_ = false;
+                        initializeAnimationProgress_ = 1.0f;
+                    }
+                }
+
+                ImGui::SameLine();
+                ImGui::Text("Path: %s", txtPath_.data());
+
 				ImGui::PushItemWidth(100.0f);
                 ImGui::InputInt("Start node", &startNode_);
 				ImGui::SameLine();
