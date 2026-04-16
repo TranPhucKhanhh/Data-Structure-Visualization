@@ -13,123 +13,218 @@ void ShortestPath::clear()
     num_vertices = 0;
 }
 
-void ShortestPath::addEdge(int _u, int _v, int _w)
+void ShortestPath::addEdge(int u, int v, int w)
 {
-    int _max_node = std::max(_u, _v); //Update and resize the adj_list.size()
-    if (_max_node >= num_vertices)
+    int max_node = std::max(u, v); //Update and resize the adj_list.size()
+    if (max_node >= num_vertices)
     {
-        num_vertices = _max_node + 1;
+        num_vertices = max_node + 1;
         adj_list.resize(num_vertices);
     }
-    adj_list[_u].push_back({_v, _w});
-    adj_list[_v].push_back({_u, _w});
+    adj_list[u].push_back({v, w});
+    adj_list[v].push_back({u, w});
 }
 
 void ShortestPath::initFromKeyboard()
 {
     clear();
-    int _edges_count;
+    int edges_count;
     std::cout << "Enter number of edges: ";
-    std::cin >> _edges_count;
+    std::cin >> edges_count;
 
-    for (int _i = 0; _i < _edges_count; ++_i)
+    for (int i = 0; i < edges_count; ++i)
     {
-        int _u, _v, _w;
-        std::cout << "Enter the " << _i + 1 << " edge: ";
-        std::cin >> _u >> _v >> _w;
-        addEdge(_u, _v, _w);
+        int u, v, w;
+        std::cout << "Enter the " << i + 1 << " edge: ";
+        std::cin >> u >> v >> w;
+        addEdge(u, v, w);
     }
 }
 
-void ShortestPath::initFromFile(const std::string &_file_path)
+std::string ShortestPath::initFromString(const std::string &input_content)
 {
-    std::ifstream _inp(_file_path);
-
-    if (!_inp.is_open())
+    if (input_content.empty())
     {
-        std::cerr << "Error: Cannot open " << _file_path << " for initialization!\n";
-        return;
+        return "Error: Input file is empty!";
     }
 
-    int _u, _v, _w;
-    while (_inp >> _u >> _v >> _w)
+    std::stringstream ss(input_content);
+    int n, m;
+
+    if (!(ss >> n >> m))
     {
-        addEdge(_u, _v, _w);
+        return "Error: Invalid header format (expected 'n m').";
     }
 
-    _inp.close();
+    if (n <= 0)
+    {
+        return "Error: Number of vertices must be positive.";
+    }
+
+    clear();
+    num_vertices = n;
+    adj_list.resize(n);
+
+    for (int i = 0; i < m; ++i)
+    {
+        int u, v, w;
+        if (!(ss >> u >> v >> w))
+        {
+            return "Error: Edge #" + std::to_string(i + 1) + " is missing or has invalid format. "
+                    "Expected " + std::to_string(m) + "edges total.";
+        }
+
+        if (u >= 0 && u < n && v >= 0 && v < n)
+        {
+            addEdge(u, v, w);
+        }
+        else
+        {
+            return "Error: Node index out of bounds at edge " + std::to_string(i + 1);
+        }
+    }
+
+    return "Success: Graph initialized successfully!";
 }
 
-std::vector<ShortestPathInstruction> ShortestPath::dijkstraStep(int _start, int _end)
+std::string ShortestPath::initFromFile(const std::string &file_path)
 {
-    std::vector<ShortestPathInstruction> _steps;
+    std::ifstream inp(file_path);
+    if (!inp.is_open())
+    {
+        return "Error: Could not open file at " + file_path;
+    }
+
+    std::stringstream buffer;
+    buffer << inp.rdbuf();
+    inp.close();
+
+    return initFromString(buffer.str());
+}
+
+std::vector<std::array<int, 3>> ShortestPath::generateRandomGraph(int& vertexCount)
+{
+    std::random_device rd;
+	std::mt19937 rng(rd());
+	std::uniform_int_distribution<int> vertexDist(5, 10);
+	std::uniform_int_distribution<int> weightDist(1, 20);
+
+	vertexCount = vertexDist(rng);
+	const int maxEdges = vertexCount * (vertexCount - 1) / 2;
+	const int minEdges = vertexCount - 1;
+	const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
+	std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
+	const int targetEdges = edgeDist(rng);
+
+	std::vector<std::array<int, 3>> edges;
+	edges.reserve(static_cast<std::size_t>(targetEdges));
+	std::set<std::pair<int, int>> used;
+
+    std::vector<int> order(static_cast<std::size_t>(vertexCount));
+	for (int i = 0; i < vertexCount; ++i) {
+        order[static_cast<std::size_t>(i)] = i;
+    }
+    std::shuffle(order.begin(), order.end(), rng);
+
+	for (int i = 1; i < vertexCount; ++i) {
+        const int u = order[static_cast<std::size_t>(i)];
+		std::uniform_int_distribution<int> parentDist(0, i - 1);
+        const int v = order[static_cast<std::size_t>(parentDist(rng))];
+		const int a = std::min(u, v);
+		const int b = std::max(u, v);
+		used.insert({ a, b });
+		edges.push_back({ u, v, weightDist(rng) });
+    }
+
+	std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
+	while (static_cast<int>(edges.size()) < targetEdges) {
+        const int u = nodeDist(rng);
+		const int v = nodeDist(rng);
+		if (u == v) {
+            continue;
+        }
+		const int a = std::min(u, v);
+		const int b = std::max(u, v);
+        if (used.find({ a, b }) != used.end()) {
+            continue;
+        }
+		used.insert({ a, b });
+		edges.push_back({ u, v, weightDist(rng) });
+    }
+
+	return edges;
+}
+
+std::vector<ShortestPathInstruction> ShortestPath::dijkstraStep(int start, int finish)
+{
+    std::vector<ShortestPathInstruction> steps;
 
     //If the number of the starting node or the end node is greater than the current number of vertices,
     //it means that there exist one node outside the graph -> cannot go from/to it
-    if (_start >= num_vertices || _end >= num_vertices)
+    if (start >= num_vertices || finish >= num_vertices)
     {
-        _steps.push_back(ShortestPathInstruction(ShortestPathOp::NOT_FOUND));
-        return _steps;
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::NOT_FOUND));
+        return steps;
     }
 
-    std::vector<int> _dist(num_vertices, INF);
-    std::vector<int> _parent(num_vertices, -1); //Used for tracing
+    std::vector<int> dist(num_vertices, INF);
+    std::vector<int> parent(num_vertices, -1); //Used for tracing
 
-    _dist[_start] = 0;
+    dist[start] = 0;
 
     //Define pair for priority_queue
     using NodePair = std::pair<int, int>;
-    std::priority_queue<NodePair, std::vector<NodePair>, std::greater<NodePair>> _pq;
+    std::priority_queue<NodePair, std::vector<NodePair>, std::greater<NodePair>> pq;
 
-    _pq.push({0, _start});
-    _steps.push_back(ShortestPathInstruction(ShortestPathOp::UPDATE_DISTANCE, _start, -1, 0));
+    pq.push({0, start});
+    steps.push_back(ShortestPathInstruction(ShortestPathOp::UPDATE_DISTANCE, start, -1, 0));
 
-    while (!_pq.empty())
+    while (!pq.empty())
     {
-        int _u = _pq.top().second, _c = _pq.top().first;
+        int u = pq.top().second, c = pq.top().first;
 
-        _pq.pop();
-        if (_c > _dist[_u]) continue;
+        pq.pop();
+        if (c > dist[u]) continue;
 
-        _steps.push_back(ShortestPathInstruction(ShortestPathOp::HIGHLIGHT_NODE, _u));
-        _steps.push_back(ShortestPathInstruction(ShortestPathOp::MARK_PERMANENT, _u));
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::HIGHLIGHT_NODE, u));
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::MARK_PERMANENT, u));
 
-        if (_u == _end) break;
+        if (u == finish) break;
 
-        for (Edge &_edge: adj_list[_u])
+        for (Edge &edge: adj_list[u])
         {
-            int _v = _edge.target_node;
-            int _w = _edge.weight;
+            int v = edge.target_node;
+            int w = edge.weight;
 
             //Show that the edge is being inspected
-            _steps.push_back(ShortestPathInstruction(ShortestPathOp::RELAX_EDGE, _u, _v, _w));
+            steps.push_back(ShortestPathInstruction(ShortestPathOp::RELAX_EDGE, u, v, w));
 
-            if (_dist[_v] > _dist[_u] + _w)
+            if (dist[v] > dist[u] + w)
             {
-                _dist[_v] = _dist[_u] + _w;
-                _parent[_v] = _u;
-                _pq.push({_dist[_v], _v});
+                dist[v] = dist[u] + w;
+                parent[v] = u;
+                pq.push({dist[v], v});
 
-                _steps.push_back(ShortestPathInstruction(ShortestPathOp::UPDATE_DISTANCE, _v, -1, _dist[_v]));
+                steps.push_back(ShortestPathInstruction(ShortestPathOp::UPDATE_DISTANCE, v, -1, dist[v]));
             }
         }
     }
 
     //Trace the final path if reachable
-    if (_dist[_end] == INF)
+    if (dist[finish] == INF)
     {
-        _steps.push_back(ShortestPathInstruction(ShortestPathOp::NOT_FOUND));
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::NOT_FOUND));
     }
     else
     {
-        int _cur = _end;
-        while (_cur != -1)
+        int cur = finish;
+        while (cur != -1)
         {
-            _steps.push_back(ShortestPathInstruction(ShortestPathOp::FOUND_PATH, _cur, _parent[_cur]));
-            _cur = _parent[_cur];
+            steps.push_back(ShortestPathInstruction(ShortestPathOp::FOUND_PATH, cur, parent[cur]));
+            cur = parent[cur];
         }
     }
 
-    return _steps;
+    return steps;
 }
 
