@@ -7,6 +7,11 @@
 #include<vector>
 #include<string>
 #include<queue>
+#include<sstream>
+#include<array>
+#include<set>
+#include<algorithm>
+#include<random>
 
 enum class ShortestPathOp
 {
@@ -25,8 +30,20 @@ struct ShortestPathInstruction
     int node_v;
     int weight; //Assume that every weight is integer
 
-    ShortestPathInstruction(ShortestPathOp _op, int _u = -1, int _v = -1, int _w = 0):
-        op_type(_op), node_u(_u), node_v(_v), weight(_w) {}
+    ShortestPathInstruction(ShortestPathOp op, int u = -1, int v = -1, int w = 0):
+        op_type(op), node_u(u), node_v(v), weight(w) {}
+};
+
+//Structure to hold the visual state of the graph at any step
+struct SPVisualState {
+    std::vector<int> distances;
+	std::vector<int> parent;
+	std::vector<bool> settled;
+	std::vector<bool> inPath;
+	int activeNode = -1;
+	int relaxU = -1;
+	int relaxV = -1;
+	bool noPath = false;
 };
 
 struct Edge
@@ -38,21 +55,36 @@ struct Edge
 struct ShortestPath {
 private:
     const int INF = 1e9;
+//    int num_vertices;
+
+public:
+    //Set public for UI to access directly
     int num_vertices;
     std::vector<std::vector<Edge>> adj_list;
 
-public:
     ShortestPath();
     ~ShortestPath();
     void clear();
-    void addEdge(int _u, int _v, int _w);
+    void addEdge(int u, int v, int w);
 
-    //Initialization
+    ///Initialization
+
+    //Use for Debugging
     void initFromKeyboard();
-    void initFromFile(const std::string &_file_path);
 
+    //std::string means to return a status message
+    std::string initFromFile(const std::string &file_path);
+
+    //Parses a raw string to initialize
+    std::string initFromString(const std::string &input_content);
+
+    std::vector<std::array<int, 3>> generateRandomGraph(int& vertexCount);
+
+    ///Dijkstra running process
     //Step-by-step Instruction
-    std::vector<ShortestPathInstruction> dijkstraStep(int _start, int _end);
+    std::vector<ShortestPathInstruction> dijkstraStep(int start, int finish);
+
+
 };
 
 inline ShortestPath shortestPath;
