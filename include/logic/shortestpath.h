@@ -35,7 +35,7 @@ struct ShortestPathInstruction
 };
 
 //Structure to hold the visual state of the graph at any step
-struct SPVisualState {
+/*struct SPVisualState {
     std::vector<int> distances;
 	std::vector<int> parent;
 	std::vector<bool> settled;
@@ -44,7 +44,7 @@ struct SPVisualState {
 	int relaxU = -1;
 	int relaxV = -1;
 	bool noPath = false;
-};
+};*/
 
 struct Edge
 {
