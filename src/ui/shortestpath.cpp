@@ -259,67 +259,9 @@ namespace {
 //		return edges;
 //	}
 
-<<<<<<< Updated upstream
-		return edges;
-	}
-
-//	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
-//		std::random_device rd;
-//		std::mt19937 rng(rd());
-//		std::uniform_int_distribution<int> vertexDist(5, 10);
-//		std::uniform_int_distribution<int> weightDist(1, 20);
-//
-//		vertexCount = vertexDist(rng);
-//		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
-//		const int minEdges = vertexCount - 1;
-//		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
-//		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
-//		const int targetEdges = edgeDist(rng);
-//
-//		std::vector<std::array<int, 3>> edges;
-//		edges.reserve(static_cast<std::size_t>(targetEdges));
-//		std::set<std::pair<int, int>> used;
-//
-//		std::vector<int> order(static_cast<std::size_t>(vertexCount));
-//		for (int i = 0; i < vertexCount; ++i) {
-//			order[static_cast<std::size_t>(i)] = i;
-//		}
-//		std::shuffle(order.begin(), order.end(), rng);
-//
-//		for (int i = 1; i < vertexCount; ++i) {
-//			const int u = order[static_cast<std::size_t>(i)];
-//			std::uniform_int_distribution<int> parentDist(0, i - 1);
-//			const int v = order[static_cast<std::size_t>(parentDist(rng))];
-//			const int a = std::min(u, v);
-//			const int b = std::max(u, v);
-//			used.insert({ a, b });
-//			edges.push_back({ u, v, weightDist(rng) });
-//		}
-//
-//		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
-//		while (static_cast<int>(edges.size()) < targetEdges) {
-//			const int u = nodeDist(rng);
-//			const int v = nodeDist(rng);
-//			if (u == v) {
-//				continue;
-//			}
-//			const int a = std::min(u, v);
-//			const int b = std::max(u, v);
-//			if (used.find({ a, b }) != used.end()) {
-//				continue;
-//			}
-//			used.insert({ a, b });
-//			edges.push_back({ u, v, weightDist(rng) });
-//		}
-//
-//		return edges;
-//	}
-
-	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges) {
-=======
 	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges, int vertex_count) {
->>>>>>> Stashed changes
 		std::ostringstream oss;
+
 		oss << vertex_count << ' ' << edges.size() << '\n';
 		for (std::size_t i = 0; i < edges.size(); ++i) {
 			const auto& edge = edges[i];
@@ -681,11 +623,10 @@ void ShortestPathUI::draw() {
 				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f, 0.0f))) {
 					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
 					edgeCount_ = static_cast<int>(graphEdges_.size());
+
 					const std::string generatedText = edgesToInputText(graphEdges_, vertexCount_);
-
 					std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", generatedText.c_str());
-					shortestPath.initFromString(edgeInput_.data());
-
+					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
 					graphLoaded_ = edgeCount_ > 0;
 					startNode_ = 0;
 					endNode_ = std::max(0, vertexCount_ - 1);
@@ -710,23 +651,13 @@ void ShortestPathUI::draw() {
                 ImGui::SameLine();
                 if (ImGui::Button("Load from File", ImVec2(120.0f, 0.0f)))
                 {
-<<<<<<< Updated upstream
-                    std::cerr << "0\n";
-                    statusMessage_ = shortestPath.initFromFile(txtPath_.data());
-                    std::cerr << "1\n";
-                    if (statusMessage_.find("Success") != std::string::npos)
-                    {
-                        vertexCount_ = shortestPath.num_vertices;
-=======
 //                    std::cerr << "0\n";
                     statusMessage_ = shortestPath.initFromFile(txtPath_.data());
 //                    std::cerr << txtPath_.data();
-
                     if (statusMessage_.find("Success") != std::string::npos)
                     {
                         syncVisualEdges();
                         vertexCount_ = shortestPath.getNumVertices();
->>>>>>> Stashed changes
                         graphLoaded_ = true;
 
                         std::ifstream file_reader(txtPath_.data());
