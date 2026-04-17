@@ -34,10 +34,6 @@ void ShortestPath::clear()
     num_vertices = 0;
 }
 
-<<<<<<< Updated upstream
-void ShortestPath::addEdge(int u, int v, int w)
-{
-=======
 int ShortestPath::getNumVertices()
 {
     return num_vertices;
@@ -45,7 +41,6 @@ int ShortestPath::getNumVertices()
 
 void ShortestPath::addEdge(int u, int v, int w)
 {
->>>>>>> Stashed changes
     int max_node = std::max(u, v); //Update and resize the adj_list.size()
     if (max_node >= num_vertices)
     {
@@ -204,11 +199,7 @@ std::vector<std::array<int, 3>> ShortestPath::generateRandomGraph(int& vertexCou
 	return edges;
 }
 
-<<<<<<< Updated upstream
-std::vector<ShortestPathInstruction> ShortestPath::dijkstraStep(int start, int finish)
-=======
 std::vector<ShortestPathInstruction> ShortestPath::getDijkstraStep(int start, int finish)
->>>>>>> Stashed changes
 {
     std::vector<ShortestPathInstruction> steps;
 
