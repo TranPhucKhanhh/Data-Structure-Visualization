@@ -60,12 +60,27 @@ private:
 public:
     //Set public for UI to access directly
     int num_vertices;
+
+    //Helper function to normalize input string
+    std::string normalizeInput(std::string raw);
+public:
+    //Set public for UI to access directly
     std::vector<std::vector<Edge>> adj_list;
 
+<<<<<<< Updated upstream
     ShortestPath();
     ~ShortestPath();
     void clear();
     void addEdge(int u, int v, int w);
+=======
+    ///Declaration and Search
+    ShortestPath();
+    ~ShortestPath();
+    void clear();
+    int getNumVertices();
+    void addEdge(int u, int v, int w);
+    int lookupEdgeWeight(const std::vector<std::array<int, 3>>& edges, int a, int b);
+>>>>>>> Stashed changes
 
     ///Initialization
 
@@ -80,10 +95,20 @@ public:
 
     std::vector<std::array<int, 3>> generateRandomGraph(int& vertexCount);
 
+<<<<<<< Updated upstream
     ///Dijkstra running process
     //Step-by-step Instruction
     std::vector<ShortestPathInstruction> dijkstraStep(int start, int finish);
 
+=======
+    ///Dijkstra running process and queries
+    //Step-by-step Instruction
+    std::vector<ShortestPathInstruction> getDijkstraStep(int start, int finish);
+
+    //Transfer functions from UI to logic
+    SPVisualState buildVisualState(const std::vector<ShortestPathInstruction>& steps, int appliedCount, int vertexCount);
+    std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps);
+>>>>>>> Stashed changes
 
 };
 

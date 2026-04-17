@@ -1,5 +1,26 @@
 #include <logic/shortestpath.h>
 
+std::string ShortestPath::normalizeInput(std::string raw) {
+    for (char& c : raw) {
+        switch (c) {
+        case ',':
+		case ';':
+		case '|':
+		case '(':
+		case ')':
+		case '[':
+		case ']':
+		case '{':
+		case '}':
+            c = ' ';
+			break;
+        default:
+            break;
+        }
+    }
+    return raw;
+}
+
 ShortestPath::ShortestPath() : num_vertices(0) {}
 
 ShortestPath::~ShortestPath()
@@ -13,8 +34,18 @@ void ShortestPath::clear()
     num_vertices = 0;
 }
 
+<<<<<<< Updated upstream
 void ShortestPath::addEdge(int u, int v, int w)
 {
+=======
+int ShortestPath::getNumVertices()
+{
+    return num_vertices;
+}
+
+void ShortestPath::addEdge(int u, int v, int w)
+{
+>>>>>>> Stashed changes
     int max_node = std::max(u, v); //Update and resize the adj_list.size()
     if (max_node >= num_vertices)
     {
@@ -24,6 +55,24 @@ void ShortestPath::addEdge(int u, int v, int w)
     adj_list[u].push_back({v, w});
     adj_list[v].push_back({u, w});
 }
+
+//Function transfered from UI to logic
+int ShortestPath::lookupEdgeWeight(const std::vector<std::array<int, 3>>& edges, int a, int b)
+{
+    int bestWeight = std::numeric_limits<int>::max();
+    bool found = false;
+	for (const auto& edge : edges) {
+        const int u = edge[0];
+		const int v = edge[1];
+		const int w = edge[2];
+		if ((u == a && v == b) || (u == b && v == a)) {
+            bestWeight = std::min(bestWeight, w);
+			found = true;
+		}
+    }
+	return found ? bestWeight : -1;
+}
+
 
 void ShortestPath::initFromKeyboard()
 {
@@ -155,7 +204,11 @@ std::vector<std::array<int, 3>> ShortestPath::generateRandomGraph(int& vertexCou
 	return edges;
 }
 
+<<<<<<< Updated upstream
 std::vector<ShortestPathInstruction> ShortestPath::dijkstraStep(int start, int finish)
+=======
+std::vector<ShortestPathInstruction> ShortestPath::getDijkstraStep(int start, int finish)
+>>>>>>> Stashed changes
 {
     std::vector<ShortestPathInstruction> steps;
 
@@ -228,3 +281,72 @@ std::vector<ShortestPathInstruction> ShortestPath::dijkstraStep(int start, int f
     return steps;
 }
 
+SPVisualState ShortestPath::buildVisualState(const std::vector<ShortestPathInstruction>& steps, int appliedCount, int vertexCount)
+{
+    SPVisualState state;
+    state.distances.assign(static_cast<std::size_t>(std::max(0, vertexCount)), std::numeric_limits<int>::max());
+	state.parent.assign(static_cast<std::size_t>(std::max(0, vertexCount)), -1);
+	state.settled.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
+	state.inPath.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
+
+	const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
+	for (int i = 0; i < count; ++i) {
+        const ShortestPathInstruction& step = steps[static_cast<std::size_t>(i)];
+		switch (step.op_type) {
+		case ShortestPathOp::HIGHLIGHT_NODE:
+            state.activeNode = step.node_u;
+			state.relaxU = -1;
+			state.relaxV = -1;
+			break;
+        case ShortestPathOp::RELAX_EDGE:
+            state.relaxU = step.node_u;
+			state.relaxV = step.node_v;
+			state.activeNode = step.node_u;
+			break;
+        case ShortestPathOp::UPDATE_DISTANCE:
+            if (step.node_u >= 0 && step.node_u < static_cast<int>(state.distances.size())) {
+                state.distances[static_cast<std::size_t>(step.node_u)] = step.weight;
+				if (state.relaxU >= 0 && state.relaxU < static_cast<int>(state.parent.size())) {
+                    state.parent[static_cast<std::size_t>(step.node_u)] = state.relaxU;
+                }
+                state.activeNode = step.node_u;
+            }
+			break;
+        case ShortestPathOp::MARK_PERMANENT:
+            if (step.node_u >= 0 && step.node_u < static_cast<int>(state.settled.size())) {
+                state.settled[static_cast<std::size_t>(step.node_u)] = true;
+                state.activeNode = step.node_u;
+            }
+			break;
+        case ShortestPathOp::FOUND_PATH:
+            if (step.node_u >= 0 && step.node_u < static_cast<int>(state.inPath.size())) {
+                state.inPath[static_cast<std::size_t>(step.node_u)] = true;
+				if (step.node_v >= 0) {
+                    state.parent[static_cast<std::size_t>(step.node_u)] = step.node_v;
+					state.relaxU = step.node_v;
+					state.relaxV = step.node_u;
+                }
+				state.activeNode = step.node_u;
+            }
+			break;
+        case ShortestPathOp::NOT_FOUND:
+            state.noPath = true;
+			break;
+        default:
+            break;
+        }
+    }
+
+	return state;
+}
+
+std::vector<int> ShortestPath::extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
+    std::vector<int> path;
+	for (const auto& step : steps) {
+        if (step.op_type == ShortestPathOp::FOUND_PATH && step.node_u >= 0) {
+            path.push_back(step.node_u);
+        }
+    }
+	std::reverse(path.begin(), path.end());
+	return path;
+}
