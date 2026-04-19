@@ -50,54 +50,6 @@ namespace {
         return loaded ? &font : nullptr;
     }
 
-    std::string sanitizeWord(const std::string& raw) {
-        std::string out;
-        out.reserve(raw.size());
-        for (char c : raw) {
-            if (std::isalpha(static_cast<unsigned char>(c)) != 0) {
-                out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-            }
-        }
-        return out;
-    }
-
-    std::vector<std::string> parseWordList(const std::string& raw) {
-        std::vector<std::string> words;
-        std::string token;
-        std::stringstream ss(raw);
-        while (std::getline(ss, token, ',')) {
-            std::string clean = sanitizeWord(token);
-            if (!clean.empty()) {
-                words.push_back(clean);
-            }
-        }
-        return words;
-    }
-
-    std::vector<std::string> generateRandomWords(int count, int minLength, int maxLength) {
-        std::vector<std::string> words;
-        count = std::max(0, count);
-        minLength = std::max(1, minLength);
-        maxLength = std::max(minLength, maxLength);
-
-        std::mt19937 rng(std::random_device{}());
-        std::uniform_int_distribution<int> lenDist(minLength, maxLength);
-        std::uniform_int_distribution<int> charDist(0, 25);
-
-        words.reserve(static_cast<std::size_t>(count));
-        for (int i = 0; i < count; ++i) {
-            const int len = lenDist(rng);
-            std::string word;
-            word.reserve(static_cast<std::size_t>(len));
-            for (int j = 0; j < len; ++j) {
-                word.push_back(static_cast<char>('a' + charDist(rng)));
-            }
-            words.push_back(std::move(word));
-        }
-
-        return words;
-    }
-
     const char* kCreateCode[] = {
         "1  FUNCTION createTrie(words):",
         "2      FOR each word in words:",
@@ -236,105 +188,6 @@ namespace {
         }
     }
 
-    void clearTrieNode(TrieNode*& node) {
-        if (node == nullptr) {
-            return;
-        }
-        for (TrieNode*& child : node->children) {
-            clearTrieNode(child);
-        }
-        delete node;
-        node = nullptr;
-    }
-
-    TrieNode* cloneTrieNode(const TrieNode* source) {
-        if (source == nullptr) {
-            return nullptr;
-        }
-        TrieNode* node = new TrieNode();
-        node->is_end_of_word = source->is_end_of_word;
-        for (int i = 0; i < 26; ++i) {
-            node->children[i] = cloneTrieNode(source->children[i]);
-        }
-        return node;
-    }
-
-    void applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruction>& steps, int appliedCount) {
-        if (root == nullptr) {
-            return;
-        }
-
-        TrieNode* current = root;
-        std::string path;
-        const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
-
-        for (int i = 0; i < count; ++i) {
-            const TrieInstruction& step = steps[i];
-            switch (step.trie_op) {
-            case TrieOp::MOVE_TO_NODE:
-            case TrieOp::CREATE_NODE: {
-                if (step.character < 'a' || step.character > 'z') {
-                    continue;
-                }
-                const int idx = step.character - 'a';
-                if (step.trie_op == TrieOp::CREATE_NODE && current->children[idx] == nullptr) {
-                    current->children[idx] = new TrieNode();
-                }
-
-                if (current->children[idx] != nullptr) {
-                    current = current->children[idx];
-                    path.push_back(step.character);
-                }
-                else if (root->children[idx] != nullptr) {
-                    current = root->children[idx];
-                    path.clear();
-                    path.push_back(step.character);
-                }
-                break;
-            }
-            case TrieOp::MARK_END:
-                current->is_end_of_word = true;
-                current = root;
-                path.clear();
-                break;
-            case TrieOp::UNMARK_END:
-                current->is_end_of_word = false;
-                break;
-            case TrieOp::DELETE_PHYSICAL:
-                if (!path.empty()) {
-                    const char erased = path.back();
-                    path.pop_back();
-
-                    TrieNode* parent = root;
-                    bool validParent = true;
-                    for (char c : path) {
-                        const int idx = c - 'a';
-                        if (idx < 0 || idx >= 26 || parent->children[idx] == nullptr) {
-                            validParent = false;
-                            break;
-                        }
-                        parent = parent->children[idx];
-                    }
-
-                    if (validParent) {
-                        const int erasedIdx = erased - 'a';
-                        if (erasedIdx >= 0 && erasedIdx < 26 && parent->children[erasedIdx] != nullptr) {
-                            clearTrieNode(parent->children[erasedIdx]);
-                            parent->children[erasedIdx] = nullptr;
-                        }
-                        current = parent;
-                    }
-                }
-                break;
-            case TrieOp::FOUND_WORD:
-            case TrieOp::NOT_FOUND:
-                current = root;
-                path.clear();
-                break;
-            }
-        }
-    }
-
     int countVisibleLeafSlots(TrieNode* node, const std::string& prefix, const std::unordered_set<std::string>* visiblePrefixes) {
         if (node == nullptr) {
             return 0;
@@ -362,7 +215,7 @@ namespace {
 TrieUI::TrieUI() {}
 
 TrieUI::~TrieUI() {
-    clearTrieNode(animationBaseRoot_);
+    trie.clearHelper(animationBaseRoot_);
     hasAnimationBase_ = false;
 }
 
@@ -468,13 +321,13 @@ void TrieUI::draw() {
     };
 
     auto captureAnimationBase = [&]() {
-        clearTrieNode(animationBaseRoot_);
-        animationBaseRoot_ = cloneTrieNode(trie.getRoot());
+        trie.clearHelper(animationBaseRoot_);
+        animationBaseRoot_ = trie.cloneTrieNode(trie.getRoot());
         hasAnimationBase_ = (animationBaseRoot_ != nullptr);
     };
 
     auto captureEmptyAnimationBase = [&]() {
-        clearTrieNode(animationBaseRoot_);
+        trie.clearHelper(animationBaseRoot_);
         animationBaseRoot_ = new TrieNode();
         hasAnimationBase_ = true;
     };
@@ -565,7 +418,7 @@ void TrieUI::draw() {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Random", ImVec2(90.0f, 0.0f))) {
-                    std::vector<std::string> words = generateRandomWords(randomWordCount_, randomMinLength_, randomMaxLength_);
+                    std::vector<std::string> words = trie.generateRandomWords(randomWordCount_, randomMinLength_, randomMaxLength_);
                     if (words.empty()) {
                         operationResult_ = "Random initialize failed";
                     }
@@ -606,7 +459,7 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Go", ImVec2(createRowButtonW, 0.0f))) {
-                    std::vector<std::string> words = parseWordList(createWords_.data());
+                    std::vector<std::string> words = trie.parseWordList(createWords_.data());
                     if (words.empty()) {
                         operationResult_ = "Create failed: enter comma-separated words (letters only)";
                     }
@@ -634,7 +487,7 @@ void TrieUI::draw() {
 
                 ImGui::SameLine();
                 if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
-                    std::string selectedPath = cr::utils::SimpleFileDialog::dialog();  
+                    std::string selectedPath = cr::utils::SimpleFileDialog::dialog();
                     if (!selectedPath.empty()) {
                         std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
                     }
@@ -668,7 +521,7 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Search", ImVec2(95.0f, 0.0f))) {
-                    const std::string word = sanitizeWord(searchWord_.data());
+                    const std::string word = trie.sanitizeWord(searchWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Search failed: enter a valid word";
                     }
@@ -688,7 +541,7 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Insert", ImVec2(95.0f, 0.0f))) {
-                    const std::string word = sanitizeWord(insertWord_.data());
+                    const std::string word = trie.sanitizeWord(insertWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Insert failed: enter a valid word";
                     }
@@ -707,7 +560,7 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Remove", ImVec2(95.0f, 0.0f))) {
-                    const std::string word = sanitizeWord(deleteWord_.data());
+                    const std::string word = trie.sanitizeWord(deleteWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Remove failed: enter a valid word";
                     }
@@ -732,8 +585,8 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Update", ImVec2(95.0f, 0.0f))) {
-                    const std::string oldWord = sanitizeWord(updateOldWord_.data());
-                    const std::string newWord = sanitizeWord(updateNewWord_.data());
+                    const std::string oldWord = trie.sanitizeWord(updateOldWord_.data());
+                    const std::string newWord = trie.sanitizeWord(updateNewWord_.data());
                     if (oldWord.empty() || newWord.empty()) {
                         operationResult_ = "Update failed: old/new words must be valid";
                     }
@@ -1006,14 +859,14 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
         static_cast<int>(currentSteps_.size())
     );
     if (hasAnimationBase_ && animationBaseRoot_ != nullptr && !currentSteps_.empty()) {
-        previewRoot = cloneTrieNode(animationBaseRoot_);
-        applyStepsToPreviewTrie(previewRoot, currentSteps_, displayAppliedCount);
+        previewRoot = trie.cloneTrieNode(animationBaseRoot_);
+        trie.applyStepsToPreviewTrie(previewRoot, currentSteps_, displayAppliedCount);
     }
 
     TrieNode* root = (previewRoot != nullptr) ? previewRoot : trie.getRoot();
     if (root == nullptr) {
         if (previewRoot != nullptr) {
-            clearTrieNode(previewRoot);
+            trie.clearHelper(previewRoot);
         }
         return;
     }
@@ -1137,7 +990,7 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
     window.draw(ring);
 
     if (previewRoot != nullptr) {
-        clearTrieNode(previewRoot);
+        trie.clearHelper(previewRoot);
     }
 }
 
