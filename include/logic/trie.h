@@ -1,8 +1,11 @@
 #pragma once
 
+#include<algorithm>
 #include<iostream>
 #include<vector>
 #include<string>
+#include<chrono>
+#include<random>
 
 //Serve for UI
 enum class TrieOp
@@ -41,15 +44,15 @@ private:
     TrieNode *root_node;
 
     //Helper functions
-    bool _isEmpty(TrieNode *_node);
-    void _clear(TrieNode *&root_node);
-    bool _deleteHelper(TrieNode *_current, std::string _word, int _index);
-    bool _deleteHelperStep(TrieNode *_current, std::string _word, int _index, std::vector<TrieInstruction> &_step);
+    bool isEmpty(TrieNode *_node);
+//    bool deleteHelper(TrieNode *current, std::string word, int index);
+    bool deleteHelperStep(TrieNode *current, std::string word, int index, std::vector<TrieInstruction> &step);
 
 public:
     Trie();
     ~Trie();
 
+    void clearHelper(TrieNode *&root_node);
     void clear();
 
     void initFromKeyboard(); // Use for debug
@@ -57,20 +60,27 @@ public:
 	TrieNode* getRoot() { return root_node; }
 
     //The Do All At Once functions
-    void initFromList(std::vector<std::string> &word_list);
-	void initFromFile(const std::string& file_path);
-    void insertWord(const std::string& word);
-    bool searchWord(const std::string& word);
-    void deleteWord(const std::string& word);
-    void updateWord(const std::string& old_word, const std::string& new_word);
+//    void initFromList(std::vector<std::string> &_word_list);
+//    void initFromFile(const std::string &_file_path);
+//    void insertWord(const std::string& _word);
+//    bool searchWord(const std::string& _word);
+//    void deleteWord(const std::string& _word);
+//    void updateWord(const std::string& _old_word, const std::string& _new_word);
 
     //The Step by Step functions
-    std::vector<TrieInstruction> initFromListStep(std::vector<std::string> &word_list);
-    std::vector<TrieInstruction> initFromFileStep(const std::string& file_path);
-    std::vector<TrieInstruction> insertWordStep(const std::string& word);
-    std::vector<TrieInstruction> searchWordStep(const std::string& word);
-    std::vector<TrieInstruction> deleteWordStep(const std::string& word);
-    std::vector<TrieInstruction> updateWordStep(const std::string& old_word, const std::string& new_word);
+    std::vector<TrieInstruction> initFromListStep(std::vector<std::string> &_word_list);
+    std::vector<TrieInstruction> initFromFileStep(const std::string &_file_path);
+    std::vector<TrieInstruction> insertWordStep(const std::string& _word);
+    std::vector<TrieInstruction> searchWordStep(const std::string& _word);
+    std::vector<TrieInstruction> deleteWordStep(const std::string& _word);
+    std::vector<TrieInstruction> updateWordStep(const std::string& _old_word, const std::string& _new_word);
+
+    //Logic functions transferred from UI file
+    std::vector<std::string> generateRandomWords(int count, int minLength, int maxLength);
+    TrieNode* cloneTrieNode(const TrieNode* source);
+    std::string sanitizeWord(const std::string& raw);
+    std::vector<std::string> parseWordList(const std::string& raw);
+    void applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruction>& steps, int appliedCount);
 };
 
 inline Trie trie;
