@@ -303,6 +303,29 @@ namespace {
 		return out;
 	}
 
+	std::string formatDistanceArray(const SPVisualState& state) {
+		if (state.distances.empty()) {
+			return "distance[] = []";
+		}
+
+		std::ostringstream oss;
+		oss << "distance[] = [";
+		for (std::size_t i = 0; i < state.distances.size(); ++i) {
+			if (i != 0) {
+				oss << ", ";
+			}
+
+			if (state.distances[i] == std::numeric_limits<int>::max()) {
+				oss << "INF";
+			}
+			else {
+				oss << state.distances[i];
+			}
+		}
+		oss << "]";
+		return oss.str();
+	}
+
 //	std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
 //		std::vector<int> path;
 //		for (const auto& step : steps) {
@@ -837,8 +860,10 @@ void ShortestPathUI::draw() {
 	const int panelMenuIndex = hasTimeline && lastOperationMenuIndex_ >= 0 ? lastOperationMenuIndex_ : operationMenuIndex_;
 	const bool operationFinished = hasTimeline && displayStep >= static_cast<int>(currentSteps_.size());
 	const int highlightedCodeLine = mapInstructionToCodeLine(displayInstruction, panelMenuIndex, operationFinished);
+	const SPVisualState panelState = shortestPath.buildVisualState(currentSteps_, displayStep, vertexCount_);
 
 	const std::string currentComment = instructionToComment(displayInstruction, statusMessage_);
+	const std::string distanceArrayText = formatDistanceArray(panelState);
 
 	const float commentY = vpPos.y + vpSize.y - 450.0f;
 	const float commentH = 115.0f;
@@ -865,6 +890,8 @@ void ShortestPathUI::draw() {
 				ImGui::TextWrapped("%s", currentComment.c_str());
 				ImGui::Separator();
 				ImGui::TextWrapped("%s", resultMessage_.c_str());
+				ImGui::Separator();
+				ImGui::TextWrapped("%s", distanceArrayText.c_str());
 				ImGui::PopStyleColor();
 			}
 		}
