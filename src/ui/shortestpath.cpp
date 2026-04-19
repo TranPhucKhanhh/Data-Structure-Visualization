@@ -303,6 +303,29 @@ namespace {
 		return out;
 	}
 
+	std::string formatDistanceArray(const SPVisualState& state) {
+		if (state.distances.empty()) {
+			return "distance[] = []";
+		}
+
+		std::ostringstream oss;
+		oss << "distance[] = [";
+		for (std::size_t i = 0; i < state.distances.size(); ++i) {
+			if (i != 0) {
+				oss << ", ";
+			}
+
+			if (state.distances[i] == std::numeric_limits<int>::max()) {
+				oss << "INF";
+			}
+			else {
+				oss << state.distances[i];
+			}
+		}
+		oss << "]";
+		return oss.str();
+	}
+
 //	std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
 //		std::vector<int> path;
 //		for (const auto& step : steps) {
@@ -461,6 +484,66 @@ void ShortestPathUI::syncVisualEdges()
     edgeCount_ = static_cast<int>(graphEdges_.size());
     vertexCount_ = n;
     graphLoaded_ = (vertexCount_ > 0);
+	randomLayoutDirty_ = true;
+}
+
+void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
+	if (vertexCount_ <= 0) {
+		randomNodeOffsets_.clear();
+		randomLayoutCanvasSize_ = canvasSize;
+		randomLayoutDirty_ = false;
+		return;
+	}
+
+	const bool needsRegenerate = randomLayoutDirty_
+		|| randomNodeOffsets_.size() != static_cast<std::size_t>(vertexCount_)
+		|| randomLayoutCanvasSize_ != canvasSize;
+
+	if (!needsRegenerate) {
+		return;
+	}
+
+	randomNodeOffsets_.clear();
+	randomNodeOffsets_.reserve(static_cast<std::size_t>(vertexCount_));
+
+	std::random_device rd;
+	std::mt19937 rng(rd());
+
+	const float halfW = static_cast<float>(canvasSize.x) * 0.34f;
+	const float halfH = static_cast<float>(canvasSize.y) * 0.23f;
+	std::uniform_real_distribution<float> xDist(-halfW, halfW);
+	std::uniform_real_distribution<float> yDist(-halfH, halfH);
+	const float minGap = std::max(52.0f, nodeRadius_ * 2.6f);
+
+	for (int i = 0; i < vertexCount_; ++i) {
+		sf::Vector2f candidate(0.0f, 0.0f);
+		bool accepted = false;
+
+		for (int attempt = 0; attempt < 150; ++attempt) {
+			candidate = sf::Vector2f(xDist(rng), yDist(rng));
+			accepted = true;
+			for (const sf::Vector2f& placed : randomNodeOffsets_) {
+				const float dx = candidate.x - placed.x;
+				const float dy = candidate.y - placed.y;
+				if (dx * dx + dy * dy < minGap * minGap) {
+					accepted = false;
+					break;
+				}
+			}
+			if (accepted) {
+				break;
+			}
+		}
+
+		if (!accepted) {
+			candidate = sf::Vector2f(xDist(rng), yDist(rng));
+		}
+
+		randomNodeOffsets_.push_back(candidate);
+	}
+
+	randomLayoutCanvasSize_ = canvasSize;
+	randomLayoutDirty_ = false;
 }
 
 void ShortestPathUI::draw() {
@@ -837,8 +920,10 @@ void ShortestPathUI::draw() {
 	const int panelMenuIndex = hasTimeline && lastOperationMenuIndex_ >= 0 ? lastOperationMenuIndex_ : operationMenuIndex_;
 	const bool operationFinished = hasTimeline && displayStep >= static_cast<int>(currentSteps_.size());
 	const int highlightedCodeLine = mapInstructionToCodeLine(displayInstruction, panelMenuIndex, operationFinished);
+	const SPVisualState panelState = shortestPath.buildVisualState(currentSteps_, displayStep, vertexCount_);
 
 	const std::string currentComment = instructionToComment(displayInstruction, statusMessage_);
+	const std::string distanceArrayText = formatDistanceArray(panelState);
 
 	const float commentY = vpPos.y + vpSize.y - 450.0f;
 	const float commentH = 115.0f;
@@ -865,6 +950,8 @@ void ShortestPathUI::draw() {
 				ImGui::TextWrapped("%s", currentComment.c_str());
 				ImGui::Separator();
 				ImGui::TextWrapped("%s", resultMessage_.c_str());
+				ImGui::Separator();
+				ImGui::TextWrapped("%s", distanceArrayText.c_str());
 				ImGui::PopStyleColor();
 			}
 		}
@@ -1114,18 +1201,15 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 
 	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
 	const sf::Vector2f center(static_cast<float>(size.x) * 0.5f + scrollOffsetX_, static_cast<float>(size.y) * 0.44f + scrollOffsetY_);
-	const float ringRadius = std::max(80.0f, std::min(size.x, size.y) * 0.28f * zoomScale_);
+	ensureRandomNodeLayout(size);
 
 	std::vector<sf::Vector2f> nodePos(static_cast<std::size_t>(vertexCount_));
-	if (vertexCount_ == 1) {
-		nodePos[0] = center;
-	}
-	else {
-		for (int i = 0; i < vertexCount_; ++i) {
-			const float t = static_cast<float>(i) / static_cast<float>(vertexCount_);
-			const float angle = t * 2.0f * 3.14159265f - 3.14159265f * 0.5f;
-			nodePos[static_cast<std::size_t>(i)] = sf::Vector2f(center.x + std::cos(angle) * ringRadius, center.y + std::sin(angle) * ringRadius);
-		}
+	for (int i = 0; i < vertexCount_; ++i) {
+		const sf::Vector2f& offset = randomNodeOffsets_[static_cast<std::size_t>(i)];
+		nodePos[static_cast<std::size_t>(i)] = sf::Vector2f(
+			center.x + offset.x * zoomScale_,
+			center.y + offset.y * zoomScale_
+		);
 	}
 
 	const sf::Vector2f collapsedCenter(static_cast<float>(size.x) * 0.5f, static_cast<float>(size.y) * 0.44f);
