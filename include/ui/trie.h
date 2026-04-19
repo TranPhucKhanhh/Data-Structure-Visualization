@@ -6,13 +6,13 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "logic/trie.h" 
+#include "logic/trie.h"
 
 enum class TriePlaybackMode {
     StepByStep,
     RunAtOnce
 };
-//dadsa
+
 class TrieUI {
 public:
     TrieUI();
@@ -39,7 +39,7 @@ private:
     int currentStepIndex_ = 0;
     int lastOperationMenuIndex_ = -1;
     float autoplayAccumulator_ = 0.0f;
-    
+
     // Kết quả của hoạt động
     std::string operationResult_ = "";
 
