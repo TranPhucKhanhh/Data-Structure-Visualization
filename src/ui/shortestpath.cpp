@@ -17,17 +17,19 @@
 #include <unordered_set>
 #include <vector>
 
+#include "utils/SimpleFileDialog.h"
+
 namespace {
-	struct SPVisualState {
-		std::vector<int> distances;
-		std::vector<int> parent;
-		std::vector<bool> settled;
-		std::vector<bool> inPath;
-		int activeNode = -1;
-		int relaxU = -1;
-		int relaxV = -1;
-		bool noPath = false;
-	};
+//	struct SPVisualState {
+//		std::vector<int> distances;
+//		std::vector<int> parent;
+//		std::vector<bool> settled;
+//		std::vector<bool> inPath;
+//		int activeNode = -1;
+//		int relaxU = -1;
+//		int relaxV = -1;
+//		bool noPath = false;
+//	};
 
 	float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
@@ -165,100 +167,102 @@ namespace {
 		}
 	}
 
-	std::string normalizeEdgeInput(std::string raw) {
-		for (char& c : raw) {
-			switch (c) {
-			case ',':
-			case ';':
-			case '|':
-			case '(':
-			case ')':
-			case '[':
-			case ']':
-			case '{':
-			case '}':
-				c = ' ';
-				break;
-			default:
-				break;
-			}
-		}
-		return raw;
-	}
+//	std::string normalizeEdgeInput(std::string raw) {
+//		for (char& c : raw) {
+//			switch (c) {
+//			case ',':
+//			case ';':
+//			case '|':
+//			case '(':
+//			case ')':
+//			case '[':
+//			case ']':
+//			case '{':
+//			case '}':
+//				c = ' ';
+//				break;
+//			default:
+//				break;
+//			}
+//		}
+//		return raw;
+//	}
 
-	std::vector<std::array<int, 3>> parseEdges(const char* rawText, int& vertexCount) {
-		std::vector<std::array<int, 3>> edges;
-		vertexCount = 0;
-		if (rawText == nullptr) {
-			return edges;
-		}
+//	std::vector<std::array<int, 3>> parseEdges(const char* rawText, int& vertexCount) {
+//		std::vector<std::array<int, 3>> edges;
+//		vertexCount = 0;
+//		if (rawText == nullptr) {
+//			return edges;
+//		}
+//
+//		std::stringstream ss(normalizeEdgeInput(rawText));
+//		int u = 0;
+//		int v = 0;
+//		int w = 0;
+//		while (ss >> u >> v >> w) {
+//			edges.push_back({ u, v, w });
+//			vertexCount = std::max(vertexCount, std::max(u, v) + 1);
+//		}
+//
+//		return edges;
+//	}
 
-		std::stringstream ss(normalizeEdgeInput(rawText));
-		int u = 0;
-		int v = 0;
-		int w = 0;
-		while (ss >> u >> v >> w) {
-			edges.push_back({ u, v, w });
-			vertexCount = std::max(vertexCount, std::max(u, v) + 1);
-		}
+//	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
+//		std::random_device rd;
+//		std::mt19937 rng(rd());
+//		std::uniform_int_distribution<int> vertexDist(5, 10);
+//		std::uniform_int_distribution<int> weightDist(1, 20);
+//
+//		vertexCount = vertexDist(rng);
+//		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
+//		const int minEdges = vertexCount - 1;
+//		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
+//		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
+//		const int targetEdges = edgeDist(rng);
+//
+//		std::vector<std::array<int, 3>> edges;
+//		edges.reserve(static_cast<std::size_t>(targetEdges));
+//		std::set<std::pair<int, int>> used;
+//
+//		std::vector<int> order(static_cast<std::size_t>(vertexCount));
+//		for (int i = 0; i < vertexCount; ++i) {
+//			order[static_cast<std::size_t>(i)] = i;
+//		}
+//		std::shuffle(order.begin(), order.end(), rng);
+//
+//		for (int i = 1; i < vertexCount; ++i) {
+//			const int u = order[static_cast<std::size_t>(i)];
+//			std::uniform_int_distribution<int> parentDist(0, i - 1);
+//			const int v = order[static_cast<std::size_t>(parentDist(rng))];
+//			const int a = std::min(u, v);
+//			const int b = std::max(u, v);
+//			used.insert({ a, b });
+//			edges.push_back({ u, v, weightDist(rng) });
+//		}
+//
+//		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
+//		while (static_cast<int>(edges.size()) < targetEdges) {
+//			const int u = nodeDist(rng);
+//			const int v = nodeDist(rng);
+//			if (u == v) {
+//				continue;
+//			}
+//			const int a = std::min(u, v);
+//			const int b = std::max(u, v);
+//			if (used.find({ a, b }) != used.end()) {
+//				continue;
+//			}
+//			used.insert({ a, b });
+//			edges.push_back({ u, v, weightDist(rng) });
+//		}
+//
+//		return edges;
+//	}
 
-		return edges;
-	}
-
-	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
-		std::random_device rd;
-		std::mt19937 rng(rd());
-		std::uniform_int_distribution<int> vertexDist(5, 10);
-		std::uniform_int_distribution<int> weightDist(1, 20);
-
-		vertexCount = vertexDist(rng);
-		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
-		const int minEdges = vertexCount - 1;
-		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
-		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
-		const int targetEdges = edgeDist(rng);
-
-		std::vector<std::array<int, 3>> edges;
-		edges.reserve(static_cast<std::size_t>(targetEdges));
-		std::set<std::pair<int, int>> used;
-
-		std::vector<int> order(static_cast<std::size_t>(vertexCount));
-		for (int i = 0; i < vertexCount; ++i) {
-			order[static_cast<std::size_t>(i)] = i;
-		}
-		std::shuffle(order.begin(), order.end(), rng);
-
-		for (int i = 1; i < vertexCount; ++i) {
-			const int u = order[static_cast<std::size_t>(i)];
-			std::uniform_int_distribution<int> parentDist(0, i - 1);
-			const int v = order[static_cast<std::size_t>(parentDist(rng))];
-			const int a = std::min(u, v);
-			const int b = std::max(u, v);
-			used.insert({ a, b });
-			edges.push_back({ u, v, weightDist(rng) });
-		}
-
-		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
-		while (static_cast<int>(edges.size()) < targetEdges) {
-			const int u = nodeDist(rng);
-			const int v = nodeDist(rng);
-			if (u == v) {
-				continue;
-			}
-			const int a = std::min(u, v);
-			const int b = std::max(u, v);
-			if (used.find({ a, b }) != used.end()) {
-				continue;
-			}
-			used.insert({ a, b });
-			edges.push_back({ u, v, weightDist(rng) });
-		}
-
-		return edges;
-	}
-
-	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges) {
+	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges, int vertex_count) {
 		std::ostringstream oss;
+
+		oss << vertex_count << ' ' << edges.size() << '\n';
 		for (std::size_t i = 0; i < edges.size(); ++i) {
 			const auto& edge = edges[i];
 			oss << edge[0] << ' ' << edge[1] << ' ' << edge[2];
@@ -269,20 +273,20 @@ namespace {
 		return oss.str();
 	}
 
-	int lookupEdgeWeight(const std::vector<std::array<int, 3>>& edges, int a, int b) {
-		int bestWeight = std::numeric_limits<int>::max();
-		bool found = false;
-		for (const auto& edge : edges) {
-			const int u = edge[0];
-			const int v = edge[1];
-			const int w = edge[2];
-			if ((u == a && v == b) || (u == b && v == a)) {
-				bestWeight = std::min(bestWeight, w);
-				found = true;
-			}
-		}
-		return found ? bestWeight : -1;
-	}
+//	int lookupEdgeWeight(const std::vector<std::array<int, 3>>& edges, int a, int b) {
+//		int bestWeight = std::numeric_limits<int>::max();
+//		bool found = false;
+//		for (const auto& edge : edges) {
+//			const int u = edge[0];
+//			const int v = edge[1];
+//			const int w = edge[2];
+//			if ((u == a && v == b) || (u == b && v == a)) {
+//				bestWeight = std::min(bestWeight, w);
+//				found = true;
+//			}
+//		}
+//		return found ? bestWeight : -1;
+//	}
 
 	std::string formatPath(const std::vector<int>& nodes) {
 		if (nodes.empty()) {
@@ -299,74 +303,74 @@ namespace {
 		return out;
 	}
 
-	std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
-		std::vector<int> path;
-		for (const auto& step : steps) {
-			if (step.op_type == ShortestPathOp::FOUND_PATH && step.node_u >= 0) {
-				path.push_back(step.node_u);
-			}
-		}
-		std::reverse(path.begin(), path.end());
-		return path;
-	}
+//	std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
+//		std::vector<int> path;
+//		for (const auto& step : steps) {
+//			if (step.op_type == ShortestPathOp::FOUND_PATH && step.node_u >= 0) {
+//				path.push_back(step.node_u);
+//			}
+//		}
+//		std::reverse(path.begin(), path.end());
+//		return path;
+//	}
 
-	SPVisualState buildVisualState(const std::vector<ShortestPathInstruction>& steps, int appliedCount, int vertexCount) {
-		SPVisualState state;
-		state.distances.assign(static_cast<std::size_t>(std::max(0, vertexCount)), std::numeric_limits<int>::max());
-		state.parent.assign(static_cast<std::size_t>(std::max(0, vertexCount)), -1);
-		state.settled.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
-		state.inPath.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
-
-		const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
-		for (int i = 0; i < count; ++i) {
-			const ShortestPathInstruction& step = steps[static_cast<std::size_t>(i)];
-			switch (step.op_type) {
-			case ShortestPathOp::HIGHLIGHT_NODE:
-				state.activeNode = step.node_u;
-				state.relaxU = -1;
-				state.relaxV = -1;
-				break;
-			case ShortestPathOp::RELAX_EDGE:
-				state.relaxU = step.node_u;
-				state.relaxV = step.node_v;
-				state.activeNode = step.node_u;
-				break;
-			case ShortestPathOp::UPDATE_DISTANCE:
-				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.distances.size())) {
-					state.distances[static_cast<std::size_t>(step.node_u)] = step.weight;
-					if (state.relaxU >= 0 && state.relaxU < static_cast<int>(state.parent.size())) {
-						state.parent[static_cast<std::size_t>(step.node_u)] = state.relaxU;
-					}
-					state.activeNode = step.node_u;
-				}
-				break;
-			case ShortestPathOp::MARK_PERMANENT:
-				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.settled.size())) {
-					state.settled[static_cast<std::size_t>(step.node_u)] = true;
-					state.activeNode = step.node_u;
-				}
-				break;
-			case ShortestPathOp::FOUND_PATH:
-				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.inPath.size())) {
-					state.inPath[static_cast<std::size_t>(step.node_u)] = true;
-					if (step.node_v >= 0) {
-						state.parent[static_cast<std::size_t>(step.node_u)] = step.node_v;
-						state.relaxU = step.node_v;
-						state.relaxV = step.node_u;
-					}
-					state.activeNode = step.node_u;
-				}
-				break;
-			case ShortestPathOp::NOT_FOUND:
-				state.noPath = true;
-				break;
-			default:
-				break;
-			}
-		}
-
-		return state;
-	}
+//	SPVisualState buildVisualState(const std::vector<ShortestPathInstruction>& steps, int appliedCount, int vertexCount) {
+//		SPVisualState state;
+//		state.distances.assign(static_cast<std::size_t>(std::max(0, vertexCount)), std::numeric_limits<int>::max());
+//		state.parent.assign(static_cast<std::size_t>(std::max(0, vertexCount)), -1);
+//		state.settled.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
+//		state.inPath.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
+//
+//		const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
+//		for (int i = 0; i < count; ++i) {
+//			const ShortestPathInstruction& step = steps[static_cast<std::size_t>(i)];
+//			switch (step.op_type) {
+//			case ShortestPathOp::HIGHLIGHT_NODE:
+//				state.activeNode = step.node_u;
+//				state.relaxU = -1;
+//				state.relaxV = -1;
+//				break;
+//			case ShortestPathOp::RELAX_EDGE:
+//				state.relaxU = step.node_u;
+//				state.relaxV = step.node_v;
+//				state.activeNode = step.node_u;
+//				break;
+//			case ShortestPathOp::UPDATE_DISTANCE:
+//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.distances.size())) {
+//					state.distances[static_cast<std::size_t>(step.node_u)] = step.weight;
+//					if (state.relaxU >= 0 && state.relaxU < static_cast<int>(state.parent.size())) {
+//						state.parent[static_cast<std::size_t>(step.node_u)] = state.relaxU;
+//					}
+//					state.activeNode = step.node_u;
+//				}
+//				break;
+//			case ShortestPathOp::MARK_PERMANENT:
+//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.settled.size())) {
+//					state.settled[static_cast<std::size_t>(step.node_u)] = true;
+//					state.activeNode = step.node_u;
+//				}
+//				break;
+//			case ShortestPathOp::FOUND_PATH:
+//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.inPath.size())) {
+//					state.inPath[static_cast<std::size_t>(step.node_u)] = true;
+//					if (step.node_v >= 0) {
+//						state.parent[static_cast<std::size_t>(step.node_u)] = step.node_v;
+//						state.relaxU = step.node_v;
+//						state.relaxV = step.node_u;
+//					}
+//					state.activeNode = step.node_u;
+//				}
+//				break;
+//			case ShortestPathOp::NOT_FOUND:
+//				state.noPath = true;
+//				break;
+//			default:
+//				break;
+//			}
+//		}
+//
+//		return state;
+//	}
 
 	void drawThickLine(sf::RenderWindow& window, const sf::Vector2f& a, const sf::Vector2f& b, float thickness, const sf::Color& color) {
 		sf::Vector2f delta = b - a;
@@ -386,6 +390,7 @@ namespace {
 
 ShortestPathUI::ShortestPathUI() {
 	const char* sampleGraph =
+        "5 6\n"
 		"0 1 4\n"
 		"0 2 1\n"
 		"2 1 2\n"
@@ -393,9 +398,8 @@ ShortestPathUI::ShortestPathUI() {
 		"2 3 5\n"
 		"3 4 3";
 	std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", sampleGraph);
-	graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
-	edgeCount_ = static_cast<int>(graphEdges_.size());
-	graphLoaded_ = edgeCount_ > 0;
+	statusMessage_ = shortestPath.initFromString(edgeInput_.data());
+	syncVisualEdges();
 	startNode_ = 0;
 	endNode_ = std::max(0, vertexCount_ - 1);
 	statusMessage_ = "Sample graph is ready.";
@@ -437,6 +441,26 @@ void ShortestPathUI::startStepTransition(int targetStep) {
 void ShortestPathUI::startInitializeAnimation() {
 	initializeAnimating_ = true;
 	initializeAnimationProgress_ = 0.0f;
+}
+
+void ShortestPathUI::syncVisualEdges()
+{
+    graphEdges_.clear();
+    int n = shortestPath.getNumVertices();
+    for (int u = 0; u < n; ++u)
+    {
+        for (const auto &edge: shortestPath.adj_list[u])
+        {
+            if (u < edge.target_node)
+            {
+                graphEdges_.push_back({u, edge.target_node, edge.weight});
+            }
+        }
+    }
+
+    edgeCount_ = static_cast<int>(graphEdges_.size());
+    vertexCount_ = n;
+    graphLoaded_ = (vertexCount_ > 0);
 }
 
 void ShortestPathUI::draw() {
@@ -597,10 +621,12 @@ void ShortestPathUI::draw() {
 				ImGui::TextWrapped("Enter each edge as three numbers: u v w. Example: 0 1 4");
 				ImGui::InputTextMultiline("##SPEdgeInput", edgeInput_.data(), edgeInput_.size(), ImVec2(-1.0f, 108.0f));
 				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f, 0.0f))) {
-					graphEdges_ = buildRandomPositiveGraph(vertexCount_);
+					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
 					edgeCount_ = static_cast<int>(graphEdges_.size());
-					const std::string generatedText = edgesToInputText(graphEdges_);
+
+					const std::string generatedText = edgesToInputText(graphEdges_, vertexCount_);
 					std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", generatedText.c_str());
+					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
 					graphLoaded_ = edgeCount_ > 0;
 					startNode_ = 0;
 					endNode_ = std::max(0, vertexCount_ - 1);
@@ -611,6 +637,52 @@ void ShortestPathUI::draw() {
 					startInitializeAnimation();
 					resetTimeline();
 				}
+
+
+                //Update the File Browser button for Shortest Path
+				if (ImGui::Button("Browse File", ImVec2(120.0f, 0.0f)))
+                {
+                    std::string selected_path = cr::utils::SimpleFileDialog::dialog();
+                    if (!selected_path.empty())
+                    {
+                        std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selected_path.c_str());
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Load from File", ImVec2(120.0f, 0.0f)))
+                {
+//                    std::cerr << "0\n";
+                    statusMessage_ = shortestPath.initFromFile(txtPath_.data());
+//                    std::cerr << txtPath_.data();
+                    if (statusMessage_.find("Success") != std::string::npos)
+                    {
+                        syncVisualEdges();
+                        vertexCount_ = shortestPath.getNumVertices();
+                        graphLoaded_ = true;
+
+                        std::ifstream file_reader(txtPath_.data());
+                        std::string content((std::istreambuf_iterator<char>(file_reader)), std::istreambuf_iterator<char>());
+                        std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", content.c_str());
+
+                        resultMessage_ = "Graph loaded from file. Ready to run Dijkstra.";
+
+                        startNode_ = std::clamp(startNode_, 0, std::max(0, vertexCount_ - 1));
+                        endNode_ = std::clamp(endNode_, 0, std::max(0, vertexCount_ - 1));
+
+                        startInitializeAnimation();
+                    }
+                    else
+                    {
+                        graphLoaded_ = false;
+                        resultMessage_ = "Error: Failed to load graph. Please check the file format.";
+                        initializeAnimating_ = false;
+                        initializeAnimationProgress_ = 1.0f;
+                    }
+                }
+
+                ImGui::SameLine();
+                ImGui::Text("Path: %s", txtPath_.data());
+
 				ImGui::PushItemWidth(100.0f);
                 ImGui::InputInt("Start node", &startNode_);
 				ImGui::SameLine();
@@ -622,6 +694,7 @@ void ShortestPathUI::draw() {
 				ImGui::TextWrapped("Use the current input to build the graph or run Dijkstra with timeline animation.");
 				if (ImGui::Button("Use sample graph", ImVec2(170.0f, 0.0f))) {
 					const char* sampleGraph =
+                        "5 6\n"
 						"0 1 4\n"
 						"0 2 1\n"
 						"2 1 2\n"
@@ -629,77 +702,76 @@ void ShortestPathUI::draw() {
 						"2 3 5\n"
 						"3 4 3";
 					std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", sampleGraph);
-					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
-					edgeCount_ = static_cast<int>(graphEdges_.size());
-					graphLoaded_ = edgeCount_ > 0;
+					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
+					syncVisualEdges();
 					startNode_ = 0;
 					endNode_ = std::max(0, vertexCount_ - 1);
+
 					pathNodes_.clear();
 					pathFound_ = false;
-					statusMessage_ = "Sample graph loaded.";
 					resultMessage_ = "Press Run Dijkstra to preview the shortest path.";
 					startInitializeAnimation();
 					resetTimeline();
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Build graph", ImVec2(120.0f, 0.0f))) {
-					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
-					edgeCount_ = static_cast<int>(graphEdges_.size());
-					graphLoaded_ = edgeCount_ > 0;
-					pathNodes_.clear();
-					pathFound_ = false;
-					resetTimeline();
-					if (graphLoaded_) {
-						statusMessage_ = "Graph loaded successfully.";
-						resultMessage_ = "Graph is ready. Press Run Dijkstra.";
-						startNode_ = std::clamp(startNode_, 0, std::max(0, vertexCount_ - 1));
-						endNode_ = std::clamp(endNode_, 0, std::max(0, vertexCount_ - 1));
-						startInitializeAnimation();
-					}
-					else {
-						statusMessage_ = "No valid edges were found in the input.";
-						resultMessage_ = "Check the edge format and try again.";
-						initializeAnimating_ = false;
-						initializeAnimationProgress_ = 1.0f;
-					}
+                    resetTimeline();
+					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
+
+					if (statusMessage_.find("Success") != std::string::npos)
+                    {
+                        syncVisualEdges();
+                        graphLoaded_ = true;
+                        startNode_ = std::clamp(startNode_, 0, std::max(0, vertexCount_ - 1));
+                        endNode_ = std::clamp(endNode_, 0, std::max(0, vertexCount_ - 1));
+                        resultMessage_ = "Graph is ready. Press Run Dijkstra.";
+                        startInitializeAnimation();
+                    }
+                    else
+                    {
+                        graphLoaded_ = false;
+                        resultMessage_ = "Check the edge format and try again.";
+                        initializeAnimating_ = false;
+                        initializeAnimationProgress_ = 1.0f;
+                    }
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Run Dijkstra", ImVec2(120.0f, 0.0f))) {
-					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
-					edgeCount_ = static_cast<int>(graphEdges_.size());
-					graphLoaded_ = edgeCount_ > 0;
-					pathNodes_.clear();
-					pathFound_ = false;
+//					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
+//					edgeCount_ = static_cast<int>(graphEdges_.size());
+//					graphLoaded_ = edgeCount_ > 0;
+//					pathNodes_.clear();
+//					pathFound_ = false;
 
 					if (!graphLoaded_) {
 						statusMessage_ = "No valid graph to run on.";
 						resultMessage_ = "Build a graph first.";
 						resetTimeline();
-						initializeAnimating_ = false;
-						initializeAnimationProgress_ = 1.0f;
+//						initializeAnimating_ = false;
+//						initializeAnimationProgress_ = 1.0f;
 					}
 					else if (startNode_ < 0 || endNode_ < 0 || startNode_ >= vertexCount_ || endNode_ >= vertexCount_) {
 						statusMessage_ = "Start or end node is outside the graph.";
 						resultMessage_ = "Adjust the node indices and try again.";
 						resetTimeline();
-						initializeAnimating_ = false;
-						initializeAnimationProgress_ = 1.0f;
+//						initializeAnimating_ = false;
+//						initializeAnimationProgress_ = 1.0f;
 					}
 					else {
-						shortestPath.clear();
-						for (const auto& edge : graphEdges_) {
-							shortestPath.addEdge(edge[0], edge[1], edge[2]);
-						}
+//						shortestPath.clear();
+//						for (const auto& edge : graphEdges_) {
+//							shortestPath.addEdge(edge[0], edge[1], edge[2]);
+//						}
 
-						std::vector<ShortestPathInstruction> steps = shortestPath.dijkstraStep(startNode_, endNode_);
-						pathNodes_ = extractPathFromSteps(steps);
+						std::vector<ShortestPathInstruction> steps = shortestPath.getDijkstraStep(startNode_, endNode_);
+						pathNodes_ = shortestPath.extractPathFromSteps(steps);
 						pathFound_ = !pathNodes_.empty();
 
 						if (pathFound_) {
 							int totalWeight = 0;
 							bool pathComplete = true;
 							for (std::size_t i = 1; i < pathNodes_.size(); ++i) {
-								const int weight = lookupEdgeWeight(graphEdges_, pathNodes_[i - 1], pathNodes_[i]);
+								const int weight = shortestPath.lookupEdgeWeight(graphEdges_, pathNodes_[i - 1], pathNodes_[i]);
 								if (weight < 0) {
 									pathComplete = false;
 									break;
@@ -707,14 +779,14 @@ void ShortestPathUI::draw() {
 								totalWeight += weight;
 							}
 
-							if (pathComplete) {
+//							if (pathComplete) {
 								statusMessage_ = "Dijkstra finished successfully.";
-								resultMessage_ = std::string("Shortest path: ") + formatPath(pathNodes_) + " | Total weight: " + std::to_string(totalWeight);
-							}
-							else {
-								statusMessage_ = "Dijkstra finished, but path preview is incomplete.";
-								resultMessage_ = std::string("Path: ") + formatPath(pathNodes_);
-							}
+								resultMessage_ = "Shortest path: " + formatPath(pathNodes_) + " | Total weight: " + std::to_string(totalWeight);
+//							}
+//							else {
+//								statusMessage_ = "Dijkstra finished, but path preview is incomplete.";
+//								resultMessage_ = std::string("Path: ") + formatPath(pathNodes_);
+//							}
 						}
 						else {
 							statusMessage_ = "No path was found between the selected nodes.";
@@ -1024,8 +1096,8 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 	const int toStep = stepTransitioning_ ? transitionToStep_ : currentStepIndex_;
 	const float transitionT = stepTransitioning_ ? easeInOut(stepTransitionProgress_) : 1.0f;
 
-	const SPVisualState fromState = buildVisualState(currentSteps_, fromStep, vertexCount_);
-	const SPVisualState toState = buildVisualState(currentSteps_, toStep, vertexCount_);
+	const SPVisualState fromState = shortestPath.buildVisualState(currentSteps_, fromStep, vertexCount_);
+	const SPVisualState toState = shortestPath.buildVisualState(currentSteps_, toStep, vertexCount_);
 
 	auto nodeColor = [&](const SPVisualState& state, int node) {
 		if (node >= 0 && node < static_cast<int>(state.inPath.size()) && state.inPath[static_cast<std::size_t>(node)]) {
@@ -1115,7 +1187,7 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 		drawThickLine(window, animatedFrom, animatedTo, edgeThickness_ * zoomScale_, sf::Color(lineColor.r, lineColor.g, lineColor.b, static_cast<std::uint8_t>(255.0f * edgeRevealT)));
 
 		if (font != nullptr) {
-			const int w = lookupEdgeWeight(graphEdges_, u, v);
+			const int w = shortestPath.lookupEdgeWeight(graphEdges_, u, v);
 			sf::Text wText(*font, std::to_string(w), static_cast<unsigned int>(16.0f * fontScale_));
 			wText.setFillColor(sf::Color(35, 35, 35, static_cast<std::uint8_t>(230.0f * edgeRevealT)));
 			const sf::Vector2f from = animatedFrom;

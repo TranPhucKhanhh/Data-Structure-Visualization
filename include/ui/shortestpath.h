@@ -23,6 +23,7 @@ public:
 	void draw();
 	void drawSfml(sf::RenderWindow& window);
 private:
+    std::array<char, 1024> txtPath_{};
 	std::array<char, 1024> edgeInput_{};
 	std::vector<std::array<int, 3>> graphEdges_;
 	std::vector<ShortestPathInstruction> currentSteps_;
@@ -83,6 +84,9 @@ private:
 	void startTimeline(std::vector<ShortestPathInstruction>&& steps, int sourceMenuIndex, const std::string& fallbackMessage);
 	void startStepTransition(int targetStep);
 	void startInitializeAnimation();
+
+	//Helper function to sync graphEdges_ from Logic to UI, to replace parseEdges function
+	void syncVisualEdges();
 };
 
-inline ShortestPathUI shortest_path_ui;	
+inline ShortestPathUI shortest_path_ui;
