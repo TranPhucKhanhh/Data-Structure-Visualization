@@ -485,6 +485,7 @@ void ShortestPathUI::syncVisualEdges()
     vertexCount_ = n;
     graphLoaded_ = (vertexCount_ > 0);
 	randomLayoutDirty_ = true;
+	forceLayoutDirty_ = true;
 }
 
 void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
@@ -544,6 +545,36 @@ void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
 
 	randomLayoutCanvasSize_ = canvasSize;
 	randomLayoutDirty_ = false;
+}
+
+void ShortestPathUI::ensureForceLayoutState(const sf::Vector2u& canvasSize) {
+	if (vertexCount_ <= 0) {
+		forceNodePositions_.clear();
+		forceNodeVelocities_.clear();
+		forceLayoutCanvasSize_ = canvasSize;
+		forceLayoutDirty_ = false;
+		return;
+	}
+
+	const bool needsReset = forceLayoutDirty_
+		|| forceNodePositions_.size() != static_cast<std::size_t>(vertexCount_)
+		|| forceNodeVelocities_.size() != static_cast<std::size_t>(vertexCount_)
+		|| forceLayoutCanvasSize_ != canvasSize;
+
+	if (!needsReset) {
+		return;
+	}
+
+	ensureRandomNodeLayout(canvasSize);
+
+	forceNodePositions_.assign(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+	forceNodeVelocities_.assign(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+	for (int i = 0; i < vertexCount_; ++i) {
+		forceNodePositions_[static_cast<std::size_t>(i)] = randomNodeOffsets_[static_cast<std::size_t>(i)];
+	}
+
+	forceLayoutCanvasSize_ = canvasSize;
+	forceLayoutDirty_ = false;
 }
 
 void ShortestPathUI::draw() {
@@ -1201,11 +1232,78 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 
 	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
 	const sf::Vector2f center(static_cast<float>(size.x) * 0.5f + scrollOffsetX_, static_cast<float>(size.y) * 0.44f + scrollOffsetY_);
-	ensureRandomNodeLayout(size);
+	ensureForceLayoutState(size);
+
+	// Step 2 (force mode): pairwise electrostatic repulsion F = k / d^2.
+	if (vertexCount_ > 1) {
+		const float simDt = std::clamp(dt, 0.0f, 0.033f);
+		std::vector<sf::Vector2f> forces(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+		const float minDist = std::max(18.0f, nodeRadius_ * 0.7f);
+		const float minDist2 = minDist * minDist;
+
+		for (int i = 0; i < vertexCount_; ++i) {
+			for (int j = i + 1; j < vertexCount_; ++j) {
+				sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(i)] - forceNodePositions_[static_cast<std::size_t>(j)];
+				float dist2 = delta.x * delta.x + delta.y * delta.y;
+				if (dist2 < minDist2) {
+					dist2 = minDist2;
+				}
+
+				float dist = std::sqrt(dist2);
+				if (dist < 0.0001f) {
+					delta = sf::Vector2f(1.0f, 0.0f);
+					dist = 1.0f;
+				}
+
+				const sf::Vector2f direction(delta.x / dist, delta.y / dist);
+				const float magnitude = forceRepelK_ / dist2;
+				const sf::Vector2f f(direction.x * magnitude, direction.y * magnitude);
+
+				forces[static_cast<std::size_t>(i)] += f;
+				forces[static_cast<std::size_t>(j)] -= f;
+			}
+		}
+
+		const float halfW = static_cast<float>(size.x) * 0.42f - forcePadding_;
+		const float halfH = static_cast<float>(size.y) * 0.30f - forcePadding_;
+		for (int i = 0; i < vertexCount_; ++i) {
+			sf::Vector2f& velocity = forceNodeVelocities_[static_cast<std::size_t>(i)];
+			sf::Vector2f& position = forceNodePositions_[static_cast<std::size_t>(i)];
+
+			velocity += forces[static_cast<std::size_t>(i)] * simDt;
+			const float speed2 = velocity.x * velocity.x + velocity.y * velocity.y;
+			const float maxSpeed2 = forceMaxSpeed_ * forceMaxSpeed_;
+			if (speed2 > maxSpeed2 && speed2 > 0.0001f) {
+				const float invLen = 1.0f / std::sqrt(speed2);
+				velocity.x = velocity.x * invLen * forceMaxSpeed_;
+				velocity.y = velocity.y * invLen * forceMaxSpeed_;
+			}
+
+			position += velocity * simDt;
+
+			if (position.x < -halfW) {
+				position.x = -halfW;
+				velocity.x *= -0.35f;
+			}
+			else if (position.x > halfW) {
+				position.x = halfW;
+				velocity.x *= -0.35f;
+			}
+
+			if (position.y < -halfH) {
+				position.y = -halfH;
+				velocity.y *= -0.35f;
+			}
+			else if (position.y > halfH) {
+				position.y = halfH;
+				velocity.y *= -0.35f;
+			}
+		}
+	}
 
 	std::vector<sf::Vector2f> nodePos(static_cast<std::size_t>(vertexCount_));
 	for (int i = 0; i < vertexCount_; ++i) {
-		const sf::Vector2f& offset = randomNodeOffsets_[static_cast<std::size_t>(i)];
+		const sf::Vector2f& offset = forceNodePositions_[static_cast<std::size_t>(i)];
 		nodePos[static_cast<std::size_t>(i)] = sf::Vector2f(
 			center.x + offset.x * zoomScale_,
 			center.y + offset.y * zoomScale_
