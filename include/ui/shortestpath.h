@@ -66,6 +66,9 @@ private:
 	float nodeRadius_ = 28.0f;
 	float edgeThickness_ = 3.0f;
 	float fontScale_ = 1.0f;
+	std::vector<sf::Vector2f> randomNodeOffsets_;
+	bool randomLayoutDirty_ = true;
+	sf::Vector2u randomLayoutCanvasSize_{0u, 0u};
 
 	bool isCanvasDragging_ = false;
 	sf::Vector2i lastDragMousePos_{0, 0};
@@ -84,6 +87,7 @@ private:
 	void startTimeline(std::vector<ShortestPathInstruction>&& steps, int sourceMenuIndex, const std::string& fallbackMessage);
 	void startStepTransition(int targetStep);
 	void startInitializeAnimation();
+	void ensureRandomNodeLayout(const sf::Vector2u& canvasSize);
 
 	//Helper function to sync graphEdges_ from Logic to UI, to replace parseEdges function
 	void syncVisualEdges();
