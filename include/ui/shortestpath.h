@@ -69,7 +69,17 @@ private:
 	std::vector<sf::Vector2f> randomNodeOffsets_;
 	bool randomLayoutDirty_ = true;
 	sf::Vector2u randomLayoutCanvasSize_{0u, 0u};
-
+	std::vector<sf::Vector2f> forceNodePositions_;
+	std::vector<sf::Vector2f> forceNodeVelocities_;
+	bool forceLayoutDirty_ = true;
+	sf::Vector2u forceLayoutCanvasSize_{0u, 0u};
+	float forceRepelK_ = 2400000.0f;
+	float forceSpringKMin_ = 0.45f;
+	float forceSpringKMax_ = 1.35f;
+	float forceCenterK_ = 2.0f;
+	float forceDamping_ = 3.0f;
+	float forceMaxSpeed_ = 700.0f;
+	float forcePadding_ = 36.0f;
 	bool isCanvasDragging_ = false;
 	sf::Vector2i lastDragMousePos_{0, 0};
 
@@ -88,6 +98,7 @@ private:
 	void startStepTransition(int targetStep);
 	void startInitializeAnimation();
 	void ensureRandomNodeLayout(const sf::Vector2u& canvasSize);
+	void ensureForceLayoutState(const sf::Vector2u& canvasSize);
 
 	//Helper function to sync graphEdges_ from Logic to UI, to replace parseEdges function
 	void syncVisualEdges();

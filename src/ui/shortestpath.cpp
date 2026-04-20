@@ -485,6 +485,7 @@ void ShortestPathUI::syncVisualEdges()
     vertexCount_ = n;
     graphLoaded_ = (vertexCount_ > 0);
 	randomLayoutDirty_ = true;
+	forceLayoutDirty_ = true;
 }
 
 void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
@@ -509,8 +510,8 @@ void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
 	std::random_device rd;
 	std::mt19937 rng(rd());
 
-	const float halfW = static_cast<float>(canvasSize.x) * 0.34f;
-	const float halfH = static_cast<float>(canvasSize.y) * 0.23f;
+	const float halfW = static_cast<float>(canvasSize.x) * 0.48f - (forcePadding_ * 0.4f);
+	const float halfH = static_cast<float>(canvasSize.y) * 0.40f - (forcePadding_ * 0.4f);
 	std::uniform_real_distribution<float> xDist(-halfW, halfW);
 	std::uniform_real_distribution<float> yDist(-halfH, halfH);
 	const float minGap = std::max(52.0f, nodeRadius_ * 2.6f);
@@ -544,6 +545,36 @@ void ShortestPathUI::ensureRandomNodeLayout(const sf::Vector2u& canvasSize) {
 
 	randomLayoutCanvasSize_ = canvasSize;
 	randomLayoutDirty_ = false;
+}
+
+void ShortestPathUI::ensureForceLayoutState(const sf::Vector2u& canvasSize) {
+	if (vertexCount_ <= 0) {
+		forceNodePositions_.clear();
+		forceNodeVelocities_.clear();
+		forceLayoutCanvasSize_ = canvasSize;
+		forceLayoutDirty_ = false;
+		return;
+	}
+
+	const bool needsReset = forceLayoutDirty_
+		|| forceNodePositions_.size() != static_cast<std::size_t>(vertexCount_)
+		|| forceNodeVelocities_.size() != static_cast<std::size_t>(vertexCount_)
+		|| forceLayoutCanvasSize_ != canvasSize;
+
+	if (!needsReset) {
+		return;
+	}
+
+	ensureRandomNodeLayout(canvasSize);
+
+	forceNodePositions_.assign(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+	forceNodeVelocities_.assign(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+	for (int i = 0; i < vertexCount_; ++i) {
+		forceNodePositions_[static_cast<std::size_t>(i)] = randomNodeOffsets_[static_cast<std::size_t>(i)];
+	}
+
+	forceLayoutCanvasSize_ = canvasSize;
+	forceLayoutDirty_ = false;
 }
 
 void ShortestPathUI::draw() {
@@ -1201,11 +1232,167 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 
 	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
 	const sf::Vector2f center(static_cast<float>(size.x) * 0.5f + scrollOffsetX_, static_cast<float>(size.y) * 0.44f + scrollOffsetY_);
-	ensureRandomNodeLayout(size);
+	ensureForceLayoutState(size);
+
+	// Step 2 (force mode): pairwise electrostatic repulsion F = k / d^2.
+	if (vertexCount_ > 1) {
+		const float simDt = std::clamp(dt, 0.0f, 0.033f);
+		std::vector<sf::Vector2f> forces(static_cast<std::size_t>(vertexCount_), sf::Vector2f(0.0f, 0.0f));
+		const float minDist = std::max(42.0f, nodeRadius_ * 1.8f);
+		const float minDist2 = minDist * minDist;
+		const float avgDegree = (vertexCount_ > 0)
+			? (2.0f * static_cast<float>(graphEdges_.size()) / static_cast<float>(vertexCount_))
+			: 1.0f;
+		const float springDensityScale = 1.0f / std::sqrt(std::max(1.0f, avgDegree));
+
+		for (int i = 0; i < vertexCount_; ++i) {
+			for (int j = i + 1; j < vertexCount_; ++j) {
+				sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(i)] - forceNodePositions_[static_cast<std::size_t>(j)];
+				float dist2 = delta.x * delta.x + delta.y * delta.y;
+				if (dist2 < minDist2) {
+					dist2 = minDist2;
+				}
+
+				float dist = std::sqrt(dist2);
+				if (dist < 0.0001f) {
+					delta = sf::Vector2f(1.0f, 0.0f);
+					dist = 1.0f;
+				}
+
+				const sf::Vector2f direction(delta.x / dist, delta.y / dist);
+				const float magnitude = forceRepelK_ / dist2;
+				const sf::Vector2f f(direction.x * magnitude, direction.y * magnitude);
+
+				forces[static_cast<std::size_t>(i)] += f;
+				forces[static_cast<std::size_t>(j)] -= f;
+			}
+		}
+
+		// Step 3 (force mode): spring force on edges F = -k * l, where k depends on edge weight.
+		int minWeight = std::numeric_limits<int>::max();
+		int maxWeight = std::numeric_limits<int>::min();
+		for (const auto& edge : graphEdges_) {
+			if (edge[2] <= 0) {
+				continue;
+			}
+			minWeight = std::min(minWeight, edge[2]);
+			maxWeight = std::max(maxWeight, edge[2]);
+		}
+		if (minWeight == std::numeric_limits<int>::max()) {
+			minWeight = 1;
+			maxWeight = 1;
+		}
+
+		for (const auto& edge : graphEdges_) {
+			const int u = edge[0];
+			const int v = edge[1];
+			const int w = std::max(1, edge[2]);
+			if (u < 0 || v < 0 || u >= vertexCount_ || v >= vertexCount_ || u == v) {
+				continue;
+			}
+
+			const float denom = static_cast<float>(std::max(1, maxWeight - minWeight));
+			const float t = std::clamp(static_cast<float>(w - minWeight) / denom, 0.0f, 1.0f);
+			// Heavier edges use softer spring, lighter edges pull tighter.
+			const float springK = std::clamp(lerp(forceSpringKMax_, forceSpringKMin_, t), forceSpringKMin_, forceSpringKMax_) * springDensityScale;
+			const float restLength = lerp(180.0f, 1000.0f, t);
+
+			sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(u)] - forceNodePositions_[static_cast<std::size_t>(v)];
+			float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+			if (dist < 0.0001f) {
+				delta = sf::Vector2f(1.0f, 0.0f);
+				dist = 1.0f;
+			}
+
+			const sf::Vector2f direction(delta.x / dist, delta.y / dist);
+			const float magnitude = springK * ((dist - restLength) / std::max(1.0f, restLength));
+			const sf::Vector2f f(-direction.x * magnitude, -direction.y * magnitude);
+
+			forces[static_cast<std::size_t>(u)] += f;
+			forces[static_cast<std::size_t>(v)] -= f;
+		}
+
+		// Pull nodes toward center and damp velocity to remove perpetual rotation.
+		const float centerScale = 1.0f / std::sqrt(static_cast<float>(std::max(1, vertexCount_)));
+		for (int i = 0; i < vertexCount_; ++i) {
+			const sf::Vector2f position = forceNodePositions_[static_cast<std::size_t>(i)];
+			const sf::Vector2f velocity = forceNodeVelocities_[static_cast<std::size_t>(i)];
+			forces[static_cast<std::size_t>(i)] += sf::Vector2f(-forceCenterK_ * centerScale * position.x, -forceCenterK_ * centerScale * position.y);
+			forces[static_cast<std::size_t>(i)] += sf::Vector2f(-forceDamping_ * velocity.x, -forceDamping_ * velocity.y);
+		}
+
+		const float halfW = static_cast<float>(size.x) * 0.48f - (forcePadding_ * 0.4f);
+		const float halfH = static_cast<float>(size.y) * 0.40f - (forcePadding_ * 0.4f);
+		for (int i = 0; i < vertexCount_; ++i) {
+			sf::Vector2f& velocity = forceNodeVelocities_[static_cast<std::size_t>(i)];
+			sf::Vector2f& position = forceNodePositions_[static_cast<std::size_t>(i)];
+			const sf::Vector2f netForce = forces[static_cast<std::size_t>(i)];
+
+			velocity += netForce * simDt;
+			const float speed2 = velocity.x * velocity.x + velocity.y * velocity.y;
+			const float maxSpeed2 = forceMaxSpeed_ * forceMaxSpeed_;
+			if (speed2 > maxSpeed2 && speed2 > 0.0001f) {
+				const float invLen = 1.0f / std::sqrt(speed2);
+				velocity.x = velocity.x * invLen * forceMaxSpeed_;
+				velocity.y = velocity.y * invLen * forceMaxSpeed_;
+			}
+
+			position += velocity * simDt;
+
+			if (position.x < -halfW) {
+				position.x = -halfW;
+				velocity.x *= -0.15f;
+			}
+			else if (position.x > halfW) {
+				position.x = halfW;
+				velocity.x *= -0.15f;
+			}
+
+			if (position.y < -halfH) {
+				position.y = -halfH;
+				velocity.y *= -0.15f;
+			}
+			else if (position.y > halfH) {
+				position.y = halfH;
+				velocity.y *= -0.15f;
+			}
+
+			const float settleSpeed2 = 3.0f * 3.0f;
+			const float settleForce2 = 18.0f * 18.0f;
+			const float netForce2 = netForce.x * netForce.x + netForce.y * netForce.y;
+			const float postSpeed2 = velocity.x * velocity.x + velocity.y * velocity.y;
+			if (postSpeed2 < settleSpeed2 && netForce2 < settleForce2) {
+				velocity = sf::Vector2f(0.0f, 0.0f);
+			}
+		}
+
+		// Final anti-overlap relaxation pass to prevent visible clumping.
+		const float separationDist = std::max(64.0f, nodeRadius_ * 2.6f);
+		for (int i = 0; i < vertexCount_; ++i) {
+			for (int j = i + 1; j < vertexCount_; ++j) {
+				sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(i)] - forceNodePositions_[static_cast<std::size_t>(j)];
+				float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+				if (dist < 0.0001f) {
+					delta = sf::Vector2f(1.0f, 0.0f);
+					dist = 1.0f;
+				}
+
+				if (dist < separationDist) {
+					const sf::Vector2f dir(delta.x / dist, delta.y / dist);
+					const float overlap = separationDist - dist;
+					const sf::Vector2f push = dir * (0.5f * overlap);
+					forceNodePositions_[static_cast<std::size_t>(i)] += push;
+					forceNodePositions_[static_cast<std::size_t>(j)] -= push;
+					forceNodeVelocities_[static_cast<std::size_t>(i)] *= 0.92f;
+					forceNodeVelocities_[static_cast<std::size_t>(j)] *= 0.92f;
+				}
+			}
+		}
+	}
 
 	std::vector<sf::Vector2f> nodePos(static_cast<std::size_t>(vertexCount_));
 	for (int i = 0; i < vertexCount_; ++i) {
-		const sf::Vector2f& offset = randomNodeOffsets_[static_cast<std::size_t>(i)];
+		const sf::Vector2f& offset = forceNodePositions_[static_cast<std::size_t>(i)];
 		nodePos[static_cast<std::size_t>(i)] = sf::Vector2f(
 			center.x + offset.x * zoomScale_,
 			center.y + offset.y * zoomScale_
