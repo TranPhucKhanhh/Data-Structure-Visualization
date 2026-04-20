@@ -166,99 +166,6 @@ namespace {
 			return fallbackMessage.empty() ? "Ready" : fallbackMessage;
 		}
 	}
-
-//	std::string normalizeEdgeInput(std::string raw) {
-//		for (char& c : raw) {
-//			switch (c) {
-//			case ',':
-//			case ';':
-//			case '|':
-//			case '(':
-//			case ')':
-//			case '[':
-//			case ']':
-//			case '{':
-//			case '}':
-//				c = ' ';
-//				break;
-//			default:
-//				break;
-//			}
-//		}
-//		return raw;
-//	}
-
-//	std::vector<std::array<int, 3>> parseEdges(const char* rawText, int& vertexCount) {
-//		std::vector<std::array<int, 3>> edges;
-//		vertexCount = 0;
-//		if (rawText == nullptr) {
-//			return edges;
-//		}
-//
-//		std::stringstream ss(normalizeEdgeInput(rawText));
-//		int u = 0;
-//		int v = 0;
-//		int w = 0;
-//		while (ss >> u >> v >> w) {
-//			edges.push_back({ u, v, w });
-//			vertexCount = std::max(vertexCount, std::max(u, v) + 1);
-//		}
-//
-//		return edges;
-//	}
-
-//	std::vector<std::array<int, 3>> buildRandomPositiveGraph(int& vertexCount) {
-//		std::random_device rd;
-//		std::mt19937 rng(rd());
-//		std::uniform_int_distribution<int> vertexDist(5, 10);
-//		std::uniform_int_distribution<int> weightDist(1, 20);
-//
-//		vertexCount = vertexDist(rng);
-//		const int maxEdges = vertexCount * (vertexCount - 1) / 2;
-//		const int minEdges = vertexCount - 1;
-//		const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
-//		std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
-//		const int targetEdges = edgeDist(rng);
-//
-//		std::vector<std::array<int, 3>> edges;
-//		edges.reserve(static_cast<std::size_t>(targetEdges));
-//		std::set<std::pair<int, int>> used;
-//
-//		std::vector<int> order(static_cast<std::size_t>(vertexCount));
-//		for (int i = 0; i < vertexCount; ++i) {
-//			order[static_cast<std::size_t>(i)] = i;
-//		}
-//		std::shuffle(order.begin(), order.end(), rng);
-//
-//		for (int i = 1; i < vertexCount; ++i) {
-//			const int u = order[static_cast<std::size_t>(i)];
-//			std::uniform_int_distribution<int> parentDist(0, i - 1);
-//			const int v = order[static_cast<std::size_t>(parentDist(rng))];
-//			const int a = std::min(u, v);
-//			const int b = std::max(u, v);
-//			used.insert({ a, b });
-//			edges.push_back({ u, v, weightDist(rng) });
-//		}
-//
-//		std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
-//		while (static_cast<int>(edges.size()) < targetEdges) {
-//			const int u = nodeDist(rng);
-//			const int v = nodeDist(rng);
-//			if (u == v) {
-//				continue;
-//			}
-//			const int a = std::min(u, v);
-//			const int b = std::max(u, v);
-//			if (used.find({ a, b }) != used.end()) {
-//				continue;
-//			}
-//			used.insert({ a, b });
-//			edges.push_back({ u, v, weightDist(rng) });
-//		}
-//
-//		return edges;
-//	}
-
 	std::string edgesToInputText(const std::vector<std::array<int, 3>>& edges, int vertex_count) {
 		std::ostringstream oss;
 
@@ -272,22 +179,6 @@ namespace {
 		}
 		return oss.str();
 	}
-
-//	int lookupEdgeWeight(const std::vector<std::array<int, 3>>& edges, int a, int b) {
-//		int bestWeight = std::numeric_limits<int>::max();
-//		bool found = false;
-//		for (const auto& edge : edges) {
-//			const int u = edge[0];
-//			const int v = edge[1];
-//			const int w = edge[2];
-//			if ((u == a && v == b) || (u == b && v == a)) {
-//				bestWeight = std::min(bestWeight, w);
-//				found = true;
-//			}
-//		}
-//		return found ? bestWeight : -1;
-//	}
-
 	std::string formatPath(const std::vector<int>& nodes) {
 		if (nodes.empty()) {
 			return "-";
@@ -325,76 +216,6 @@ namespace {
 		oss << "]";
 		return oss.str();
 	}
-
-//	std::vector<int> extractPathFromSteps(const std::vector<ShortestPathInstruction>& steps) {
-//		std::vector<int> path;
-//		for (const auto& step : steps) {
-//			if (step.op_type == ShortestPathOp::FOUND_PATH && step.node_u >= 0) {
-//				path.push_back(step.node_u);
-//			}
-//		}
-//		std::reverse(path.begin(), path.end());
-//		return path;
-//	}
-
-//	SPVisualState buildVisualState(const std::vector<ShortestPathInstruction>& steps, int appliedCount, int vertexCount) {
-//		SPVisualState state;
-//		state.distances.assign(static_cast<std::size_t>(std::max(0, vertexCount)), std::numeric_limits<int>::max());
-//		state.parent.assign(static_cast<std::size_t>(std::max(0, vertexCount)), -1);
-//		state.settled.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
-//		state.inPath.assign(static_cast<std::size_t>(std::max(0, vertexCount)), false);
-//
-//		const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
-//		for (int i = 0; i < count; ++i) {
-//			const ShortestPathInstruction& step = steps[static_cast<std::size_t>(i)];
-//			switch (step.op_type) {
-//			case ShortestPathOp::HIGHLIGHT_NODE:
-//				state.activeNode = step.node_u;
-//				state.relaxU = -1;
-//				state.relaxV = -1;
-//				break;
-//			case ShortestPathOp::RELAX_EDGE:
-//				state.relaxU = step.node_u;
-//				state.relaxV = step.node_v;
-//				state.activeNode = step.node_u;
-//				break;
-//			case ShortestPathOp::UPDATE_DISTANCE:
-//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.distances.size())) {
-//					state.distances[static_cast<std::size_t>(step.node_u)] = step.weight;
-//					if (state.relaxU >= 0 && state.relaxU < static_cast<int>(state.parent.size())) {
-//						state.parent[static_cast<std::size_t>(step.node_u)] = state.relaxU;
-//					}
-//					state.activeNode = step.node_u;
-//				}
-//				break;
-//			case ShortestPathOp::MARK_PERMANENT:
-//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.settled.size())) {
-//					state.settled[static_cast<std::size_t>(step.node_u)] = true;
-//					state.activeNode = step.node_u;
-//				}
-//				break;
-//			case ShortestPathOp::FOUND_PATH:
-//				if (step.node_u >= 0 && step.node_u < static_cast<int>(state.inPath.size())) {
-//					state.inPath[static_cast<std::size_t>(step.node_u)] = true;
-//					if (step.node_v >= 0) {
-//						state.parent[static_cast<std::size_t>(step.node_u)] = step.node_v;
-//						state.relaxU = step.node_v;
-//						state.relaxV = step.node_u;
-//					}
-//					state.activeNode = step.node_u;
-//				}
-//				break;
-//			case ShortestPathOp::NOT_FOUND:
-//				state.noPath = true;
-//				break;
-//			default:
-//				break;
-//			}
-//		}
-//
-//		return state;
-//	}
-
 	void drawThickLine(sf::RenderWindow& window, const sf::Vector2f& a, const sf::Vector2f& b, float thickness, const sf::Color& color) {
 		sf::Vector2f delta = b - a;
 		const float length = std::sqrt(delta.x * delta.x + delta.y * delta.y);
