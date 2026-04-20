@@ -26,6 +26,7 @@ void MenuUI::draw() {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	const ImVec2 vpPos = viewport->Pos;
 	const ImVec2 vpSize = viewport->Size;
+	const float uiScale = std::max(0.70f, std::min(vpSize.x / 1920.0f, vpSize.y / 1080.0f));
 
 	ImGui::SetNextWindowPos(vpPos, ImGuiCond_Always);
 	ImGui::SetNextWindowSize(vpSize, ImGuiCond_Always);
@@ -50,12 +51,12 @@ void MenuUI::draw() {
 	ImFont* subtitleFont = menuSubtitleFont != nullptr ? menuSubtitleFont : fallbackFont;
 	ImFont* cardTitleFont = menuCardTitleFont != nullptr ? menuCardTitleFont : fallbackFont;
 	ImFont* cardDescFont = menuCardDescFont != nullptr ? menuCardDescFont : fallbackFont;
-	const float titleFontSize = titleFont != nullptr ? titleFont->FontSize : 56.0f;
-	const float subtitleFontSize = subtitleFont != nullptr ? subtitleFont->FontSize : 28.0f;
-	const float cardTitleFontSize = cardTitleFont != nullptr ? cardTitleFont->FontSize : 24.0f;
-	const float cardDescFontSize = cardDescFont != nullptr ? cardDescFont->FontSize : 20.0f;
+	const float titleFontSize = (titleFont != nullptr ? titleFont->FontSize : 56.0f) * uiScale;
+	const float subtitleFontSize = (subtitleFont != nullptr ? subtitleFont->FontSize : 28.0f) * uiScale;
+	const float cardTitleFontSize = (cardTitleFont != nullptr ? cardTitleFont->FontSize : 24.0f) * uiScale;
+	const float cardDescFontSize = (cardDescFont != nullptr ? cardDescFont->FontSize : 20.0f) * uiScale;
 	const ImVec2 origin = ImGui::GetWindowPos();
-	const float titleY = origin.y + 24.0f;
+	const float titleY = origin.y + 24.0f * uiScale;
 	const char* title = "Data Structure Visualization";
 	const ImVec2 titleSize = titleFont
 		? titleFont->CalcTextSizeA(titleFontSize, FLT_MAX, 0.0f, title)
@@ -79,7 +80,7 @@ void MenuUI::draw() {
 	const ImVec2 subtitleSize = subtitleFont
 		? subtitleFont->CalcTextSizeA(subtitleFontSize, FLT_MAX, 0.0f, subtitle)
 		: ImGui::CalcTextSize(subtitle);
-	const float subtitleY = titleY + titleSize.y + 8.0f;
+	const float subtitleY = titleY + titleSize.y + 8.0f * uiScale;
 	if (subtitleFont) {
 		drawList->AddText(subtitleFont, subtitleFontSize,
 			ImVec2(origin.x + (vpSize.x - subtitleSize.x) * 0.5f, subtitleY),
@@ -95,11 +96,12 @@ void MenuUI::draw() {
 		);
 	}
 
-	const float topPadding = subtitleY + subtitleSize.y + 22.0f - origin.y;
-	const float gap = 24.0f;
-	const float areaWidth = std::min(vpSize.x - 80.0f, 1220.0f);
+	const float topPadding = subtitleY + subtitleSize.y + 22.0f * uiScale - origin.y;
+	const float gap = 24.0f * uiScale;
+	const float areaWidth = std::min(vpSize.x - 80.0f * uiScale, 1220.0f * uiScale);
 	const float cardWidth = (areaWidth - gap) * 0.5f;
-	const float cardHeight = std::min((vpSize.y - topPadding - 64.0f - gap) * 0.5f, 330.0f);
+	const float bottomReserved = 112.0f * uiScale;
+	const float cardHeight = std::min((vpSize.y - topPadding - bottomReserved - gap) * 0.5f, 330.0f * uiScale);
 	const float startX = origin.x + (vpSize.x - areaWidth) * 0.5f;
 	const float startY = origin.y + topPadding;
 
@@ -229,21 +231,21 @@ void MenuUI::draw() {
 		const ImU32 cardBg = hovered ? IM_COL32(244, 249, 255, 255) : IM_COL32(239, 247, 252, 255);
 		const ImU32 border = hovered ? IM_COL32(52, 120, 246, 255) : IM_COL32(172, 206, 223, 255);
 
-		drawList->AddRectFilled(min, max, cardBg, 8.0f);
-		drawList->AddRect(min, max, border, 8.0f, 0, hovered ? 3.0f : 2.0f);
+		drawList->AddRectFilled(min, max, cardBg, 8.0f * uiScale);
+		drawList->AddRect(min, max, border, 8.0f * uiScale, 0, hovered ? 3.0f * uiScale : 2.0f * uiScale);
 
-		const ImVec2 previewMin(min.x + 14.0f, min.y + 14.0f);
+		const ImVec2 previewMin(min.x + 14.0f * uiScale, min.y + 14.0f * uiScale);
 		const ImVec2 previewMax(max.x - 14.0f, min.y + cardHeight * 0.68f);
-		drawList->AddRectFilled(previewMin, previewMax, previewBg, 4.0f);
+		drawList->AddRectFilled(previewMin, previewMax, previewBg, 4.0f * uiScale);
 		drawPreview(iconType, previewMin, previewMax, IM_COL32(244, 248, 255, 245), hovered, static_cast<float>(ImGui::GetTime()));
 
 		if (cardTitleFont != nullptr && cardDescFont != nullptr) {
-			drawList->AddText(cardTitleFont, cardTitleFontSize, ImVec2(min.x + 18.0f, previewMax.y + 14.0f), IM_COL32(19, 32, 43, 255), label);
-			drawList->AddText(cardDescFont, cardDescFontSize, ImVec2(min.x + 18.0f, previewMax.y + 42.0f), IM_COL32(84, 97, 110, 255), desc);
+			drawList->AddText(cardTitleFont, cardTitleFontSize, ImVec2(min.x + 18.0f * uiScale, previewMax.y + 14.0f * uiScale), IM_COL32(19, 32, 43, 255), label);
+			drawList->AddText(cardDescFont, cardDescFontSize, ImVec2(min.x + 18.0f * uiScale, previewMax.y + 42.0f * uiScale), IM_COL32(84, 97, 110, 255), desc);
 		}
 		else {
-			drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 14.0f), IM_COL32(19, 32, 43, 255), label);
-			drawList->AddText(ImVec2(min.x + 18.0f, previewMax.y + 42.0f), IM_COL32(84, 97, 110, 255), desc);
+			drawList->AddText(ImVec2(min.x + 18.0f * uiScale, previewMax.y + 14.0f * uiScale), IM_COL32(19, 32, 43, 255), label);
+			drawList->AddText(ImVec2(min.x + 18.0f * uiScale, previewMax.y + 42.0f * uiScale), IM_COL32(84, 97, 110, 255), desc);
 		}
 	};
 
@@ -251,6 +253,19 @@ void MenuUI::draw() {
 	drawCard("card_trie", "Trie", "Prefix tree visualization", UIState::Trie, IM_COL32(61, 176, 199, 255), 1, ImVec2(startX + cardWidth + gap, startY));
 	drawCard("card_heap", "Heap", "Binary heap relationships", UIState::Heap, IM_COL32(245, 193, 36, 255), 2, ImVec2(startX, startY + cardHeight + gap));
 	drawCard("card_sp", "Shortest Path on Graph", "Weighted graph path exploration", UIState::ShortestPath, IM_COL32(220, 83, 68, 255), 3, ImVec2(startX + cardWidth + gap, startY + cardHeight + gap));
+
+	const ImVec2 quitSize(180.0f * uiScale, 44.0f * uiScale);
+	ImGui::SetCursorScreenPos(ImVec2(
+		origin.x + (vpSize.x - quitSize.x) * 0.5f,
+		origin.y + vpSize.y - quitSize.y - 26.0f * uiScale
+	));
+	ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(209, 67, 49, 255));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(221, 86, 67, 255));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(180, 54, 40, 255));
+	if (ImGui::Button("QUIT", quitSize)) {
+		uiConfig.requestAppQuit = true;
+	}
+	ImGui::PopStyleColor(3);
 
 	ImGui::End();
 	ImGui::PopStyleColor();

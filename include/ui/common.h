@@ -14,6 +14,7 @@ enum class UIState {
 // Cấu trúc lưu trữ trạng thái hiện tại
 struct UIConfig {
 	UIState state = UIState::Menu; // Mặc định khi mở app lên sẽ ở Menu
+	bool requestAppQuit = false;
 };
 
 // Biến toàn cục để các file khác đều có thể truy cập và thay đổi trạng thái

@@ -57,13 +57,25 @@ int main()
 {
 	sf::ContextSettings contextSettings;
 	contextSettings.antiAliasingLevel = 8;
+
+	// Prefer 1920x1080 fullscreen to keep the authored UI proportions stable.
+	sf::VideoMode fullscreenMode = sf::VideoMode::getDesktopMode();
+	for (const sf::VideoMode& mode : sf::VideoMode::getFullscreenModes()) {
+		if (mode.size.x == 1920 && mode.size.y == 1080) {
+			fullscreenMode = mode;
+			break;
+		}
+	}
+
 	sf::RenderWindow window(
-		sf::VideoMode({ 1920, 1080 }),
+		fullscreenMode,
 		"Data Visualization :))",
 		sf::Style::Default,
-		sf::State::Windowed,
+		sf::State::Fullscreen,
 		contextSettings
 	);
+
+	uiConfig.requestAppQuit = false;
 
 	if (!ImGui::SFML::Init(window)) {
 		return -1;
@@ -101,6 +113,9 @@ int main()
 
 		window.clear();
 		drawActiveScreen(window);
+		if (uiConfig.requestAppQuit) {
+			window.close();
+		}
 		ImGui::SFML::Render(window);
 
 		window.display();
