@@ -4,3 +4,9 @@ out
 .idea
 .vs
 .vscode
+*.cbp
+*.layout
+*.depend
+*.cscope_file_list
+obj/
+bin/

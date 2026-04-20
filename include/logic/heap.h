@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <string>
+#include <random>
+#include <sstream>
 
 enum class HeapType {
 	MinHeap,
@@ -9,16 +11,15 @@ enum class HeapType {
 };
 
 enum class HeapOp {
-	SwapLeftChild, // Swap the current node with its left child and go to left child, the data also shows the left child pos
+	SwapLeftChild,  // Swap the current node with its left child and go to left child, the data also shows the left child pos
 	SwapRightChild, // Swap the current node with its right child and go to right child, the data also shows the right child pos
-	SwapParent, // Swap the current node with its parent and go to parent
-	VisitStraight, // Visit the next index node in the heap vector without swapping
-	UpdateValue, // Update the value of the current node to 'data'
-	AddBackValue, // Add a new node with value 'data' to the back of the heap vecctor 
-	MoveBackToTop, // Move the back value to the top of the heap and delete the back value
-
-	FoundValue, // Search found the value
-	NotFound, // Search did not find the value
+	SwapParent,     // Swap the current node with its parent and go to parent
+	VisitStraight,  // Visit the next index node in the heap vector without swapping
+	UpdateValue,    // Update the value of the current node to 'data'
+	AddBackValue,   // Add a new node with value 'data' to the back of the heap vecctor
+	MoveBackToTop,  // Move the back value to the top of the heap and delete the back value
+	FoundValue,     // Search found the value
+	NotFound,       // Search did not find the value
 };
 
 struct HeapInstruction {
@@ -62,15 +63,18 @@ public:
 	void deleteTop();
 	void updateValue(const int& old_value, const int &new_value);
 
-
 	// Step by step functions
 	std::vector<HeapInstruction> initFromListStep(const std::vector<int>& list);
 	std::vector<HeapInstruction> initFromFileStep(const std::string& file_path);
+	std::vector<HeapInstruction> initRandomStep(const int &num);
 	std::vector<HeapInstruction> insertValueStep(const int& val);
 	std::vector<HeapInstruction> searchValueStep(const int& val);
 	std::vector<HeapInstruction> deleteTopStep();
 	std::vector<HeapInstruction> updateValueStep(const int& old_value, const int& new_value);
 
+	//Logic functions moved from UI file
+	void applyInstructions(std::vector<int> &state, const HeapInstruction &instruction, int &cursor_idx);
+    std::vector<int> parseIntegers(const std::string& raw) const;
 };
 
 inline Heap heap;
