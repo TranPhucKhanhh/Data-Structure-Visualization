@@ -211,23 +211,6 @@ namespace {
 
 HeapUI::HeapUI() {}
 
-std::vector<int> HeapUI::parseIntegers(const std::string& raw) const {
-	std::vector<int> values;
-	std::stringstream ss(raw);
-	std::string token;
-	while (std::getline(ss, token, ',')) {
-		if (token.empty()) {
-			continue;
-		}
-		try {
-			values.push_back(std::stoi(token));
-		}
-		catch (...) {
-		}
-	}
-	return values;
-}
-
 void HeapUI::rebuildViewFromStep(int stepIndex) {
 	timelineHeap_ = timelineBaseHeap_;
 	activeIndex_ = -1;
@@ -237,78 +220,23 @@ void HeapUI::rebuildViewFromStep(int stepIndex) {
 	const int clamped = std::clamp(stepIndex, 0, static_cast<int>(currentSteps_.size()));
 	for (int i = 0; i < clamped; ++i) {
 		const HeapInstruction& step = currentSteps_[i];
-		switch (step.heap_op) {
-		case HeapOp::AddBackValue:
-			timelineHeap_.push_back(step.data);
-			displayCursorIndex_ = static_cast<int>(timelineHeap_.size()) - 1;
-			activeIndex_ = displayCursorIndex_;
-			secondaryIndex_ = -1;
-			break;
-		case HeapOp::SwapParent: {
-			const int parent = step.data;
-			if (displayCursorIndex_ >= 0 && displayCursorIndex_ < static_cast<int>(timelineHeap_.size()) &&
-				parent >= 0 && parent < static_cast<int>(timelineHeap_.size())) {
-				std::swap(timelineHeap_[displayCursorIndex_], timelineHeap_[parent]);
-				secondaryIndex_ = displayCursorIndex_;
-				displayCursorIndex_ = parent;
-				activeIndex_ = displayCursorIndex_;
-			}
-			break;
-		}
-		case HeapOp::SwapLeftChild:
-		case HeapOp::SwapRightChild: {
-			const int child = step.data;
-			if (displayCursorIndex_ >= 0 && displayCursorIndex_ < static_cast<int>(timelineHeap_.size()) &&
-				child >= 0 && child < static_cast<int>(timelineHeap_.size())) {
-				std::swap(timelineHeap_[displayCursorIndex_], timelineHeap_[child]);
-				secondaryIndex_ = displayCursorIndex_;
-				displayCursorIndex_ = child;
-				activeIndex_ = displayCursorIndex_;
-			}
-			break;
-		}
-		case HeapOp::MoveBackToTop:
-			if (!timelineHeap_.empty()) {
-				timelineHeap_[0] = timelineHeap_.back();
-				timelineHeap_.pop_back();
-				displayCursorIndex_ = timelineHeap_.empty() ? -1 : 0;
-				activeIndex_ = displayCursorIndex_;
-				secondaryIndex_ = -1;
-			}
-			break;
-		case HeapOp::VisitStraight:
-			if (!timelineHeap_.empty()) {
-				const bool useExplicitIndex = (lastOperationMenuIndex_ == 0 || lastOperationMenuIndex_ == 1 || lastOperationMenuIndex_ == 4);
-				if (useExplicitIndex && step.data >= 0 && step.data < static_cast<int>(timelineHeap_.size())) {
-					displayCursorIndex_ = step.data;
-				}
-				else if (displayCursorIndex_ < 0) {
-					displayCursorIndex_ = 0;
-				}
-				else {
-					displayCursorIndex_ = std::min(displayCursorIndex_ + 1, static_cast<int>(timelineHeap_.size()) - 1);
-				}
-				activeIndex_ = displayCursorIndex_;
-				secondaryIndex_ = -1;
-			}
-			break;
-		case HeapOp::UpdateValue:
-			if (displayCursorIndex_ >= 0 && displayCursorIndex_ < static_cast<int>(timelineHeap_.size())) {
-				timelineHeap_[displayCursorIndex_] = step.data;
-				activeIndex_ = displayCursorIndex_;
-				secondaryIndex_ = -1;
-			}
-			break;
-		case HeapOp::FoundValue:
-			activeIndex_ = displayCursorIndex_;
-			secondaryIndex_ = -1;
-			break;
-		case HeapOp::NotFound:
-			activeIndex_ = -1;
-			secondaryIndex_ = -1;
-			break;
-		}
+
+		int _old_cursor = displayCursorIndex_;
+        heap.applyInstructions(timelineHeap_, step, displayCursorIndex_);
+
+        if (step.heap_op == HeapOp::SwapLeftChild ||
+            step.heap_op == HeapOp::SwapRightChild ||
+            step.heap_op == HeapOp::SwapRightChild)
+        {
+            secondaryIndex_ = _old_cursor;
+        }
+        else
+        {
+            secondaryIndex_ = -1;
+        }
 	}
+
+	activeIndex_ = displayCursorIndex_;
 }
 
 void HeapUI::startTimeline(std::vector<HeapInstruction>&& steps, const std::vector<int>& baseData, int sourceMenuIndex, const std::string& fallbackMessage) {
@@ -399,18 +327,6 @@ void HeapUI::draw() {
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 
-	auto randomList = [&](int count) {
-		count = std::max(0, count);
-		std::mt19937 rng(std::random_device{}());
-		std::uniform_int_distribution<int> valueDist(0, 99);
-		std::vector<int> list;
-		list.reserve(static_cast<std::size_t>(count));
-		for (int i = 0; i < count; ++i) {
-			list.push_back(valueDist(rng));
-		}
-		return list;
-	};
-
 	auto switchHeapType = [&]() {
 		const std::vector<int> current = heap.getData();
 		heap.swapType();
@@ -496,10 +412,9 @@ void HeapUI::draw() {
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				if (ImGui::Button("Random", ImVec2(78.0f, 0.0f))) {
-					std::vector<int> values = randomList(randomCount_);
-					heap.clear();
-					std::vector<HeapInstruction> steps = heap.initFromListStep(values);
-					startTimeline(std::move(steps), values, 0, "Initialized random heap");
+
+					std::vector<HeapInstruction> steps = heap.initRandomStep(randomCount_);
+					startTimeline(std::move(steps), heap.getData(), 0, "Initialized random heap");
 				}
 
 				ImGui::Separator();
@@ -510,7 +425,7 @@ void HeapUI::draw() {
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				if (ImGui::Button("Go", ImVec2(56.0f, 0.0f))) {
-					const std::vector<int> values = parseIntegers(createValues_.data());
+					const std::vector<int> values = heap.parseIntegers(createValues_.data());
 					if (values.empty()) {
 						operationResult_ = "Create failed: enter comma-separated integers";
 					}
@@ -531,7 +446,7 @@ void HeapUI::draw() {
 
 				ImGui::SameLine();
 				if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
-					std::string selectedPath = cr::utils::SimpleFileDialog::dialog ();  
+					std::string selectedPath = cr::utils::SimpleFileDialog::dialog ();
 					if (!selectedPath.empty()) {
 						std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
 					}

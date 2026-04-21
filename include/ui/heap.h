@@ -82,7 +82,6 @@ private:
 	sf::Color indexTextColor_{68, 68, 68, 255};
 	sf::Color highlightRingColor_{255, 214, 102, 230};
 
-	std::vector<int> parseIntegers(const std::string& raw) const;
 	void rebuildViewFromStep(int stepIndex);
 	void startTimeline(std::vector<HeapInstruction>&& steps, const std::vector<int>& baseData, int sourceMenuIndex, const std::string& fallbackMessage);
 	void startStepTransition(int targetStep);

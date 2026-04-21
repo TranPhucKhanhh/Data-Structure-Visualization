@@ -44,7 +44,7 @@ void Heap::heapifyDown(int id) {
 std::vector<HeapInstruction> Heap::heapifyUpStep(int id) {
 	std::vector<HeapInstruction> instructions;
 	while (id != 0 && !compareIndex(getParent(id), id)) {
-		instructions.push_back(HeapInstruction(HeapOp::SwapParent, getParent(id)));	
+		instructions.push_back(HeapInstruction(HeapOp::SwapParent, getParent(id)));
 		std::swap(heap[id], heap[getParent(id)]);
 		id = getParent(id);
 	}
@@ -126,7 +126,7 @@ void Heap::initRandom(const int &num) {
     for (int i = 0; i < num; i++) {
         vc.push_back(min_value + (std::rand() % (max_value - min_value + 1)));
     }
-    
+
     initFromList(vc);
 }
 
@@ -203,6 +203,18 @@ std::vector<HeapInstruction> Heap::initFromFileStep(const std::string& file_path
 	return initFromListStep(values);
 }
 
+std::vector<HeapInstruction> Heap::initRandomStep(const int &num)
+{
+    std::vector<int> values;
+
+    std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> valueDist(0, 99);
+
+    for (int i = 0; i < num; ++i) values.push_back(valueDist(rng));
+
+    return initFromListStep(values);
+}
+
 std::vector<HeapInstruction> Heap::insertValueStep(const int& val)
 {
 	std::vector<HeapInstruction> instructions;
@@ -269,3 +281,72 @@ std::vector<HeapInstruction> Heap::searchValueStep(const int& val)
 	instructions.push_back(HeapInstruction(HeapOp::NotFound));
 	return instructions;
 }
+
+//Split function from the old rebuildViewFromStep function in the UI file, to pull the logic feature from the old function to the logic file.
+void Heap::applyInstructions(std::vector<int> &state, const HeapInstruction &instruction, int &cursor_idx)
+{
+    switch(instruction.heap_op)
+    {
+    case HeapOp::AddBackValue:
+        {
+            state.push_back(instruction.data);
+            cursor_idx = (int)state.size() - 1;
+            break;
+        }
+    case HeapOp::SwapParent:
+    case HeapOp::SwapLeftChild:
+    case HeapOp::SwapRightChild:
+        {
+            int _target_index = instruction.data;
+            if (cursor_idx >= 0 && cursor_idx < state.size() &&
+                _target_index >= 0 && _target_index < state.size())
+            {
+                std::swap(state[cursor_idx], state[_target_index]);
+                cursor_idx = _target_index;
+            }
+            break;
+        }
+    case HeapOp::MoveBackToTop:
+        {
+            if (!state.empty())
+            {
+                state[0] = state.back();
+                state.pop_back();
+                cursor_idx = (state.empty()) ? -1 : 0;
+            }
+            break;
+        }
+    case HeapOp::VisitStraight:
+        {
+            cursor_idx = instruction.data;
+            break;
+        }
+    case HeapOp::UpdateValue:
+        {
+            if (cursor_idx >= 0 && cursor_idx < state.size())
+            {
+                state[cursor_idx] = instruction.data;
+            }
+            break;
+        }
+    default: break;
+    }
+}
+
+std::vector<int> Heap::parseIntegers(const std::string& raw) const {
+	std::vector<int> _values;
+	std::stringstream _ss(raw);
+	std::string _token;
+	while (std::getline(_ss, _token, ',')) {
+		if (_token.empty()) {
+			continue;
+		}
+		try {
+			_values.push_back(std::stoi(_token));
+		}
+		catch (...) {
+		}
+	}
+	return _values;
+}
+
