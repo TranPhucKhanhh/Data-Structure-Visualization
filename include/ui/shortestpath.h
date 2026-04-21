@@ -76,7 +76,7 @@ private:
 	float forceRepelK_ = 2400000.0f;
 	float forceSpringKMin_ = 0.45f;
 	float forceSpringKMax_ = 1.35f;
-	float forceCenterK_ = 2.0f;
+	float forceCenterK_ = 3.0f;
 	float forceDamping_ = 3.0f;
 	float forceMaxSpeed_ = 700.0f;
 	float forcePadding_ = 36.0f;
