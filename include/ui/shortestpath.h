@@ -80,6 +80,11 @@ private:
 	float forceDamping_ = 3.0f;
 	float forceMaxSpeed_ = 700.0f;
 	float forcePadding_ = 36.0f;
+	bool isNodeDragging_ = false;
+	int draggedNodeIndex_ = -1;
+	sf::Vector2f dragOffsetWorld_{0.0f, 0.0f};
+	sf::Vector2f lastMouseWorldPos_{0.0f, 0.0f};
+	bool wasLeftMousePressed_ = false;
 
 	sf::Color canvasBgColor_{255, 255, 255, 255};
 	sf::Color nodeBaseColor_{230, 230, 230, 255};
