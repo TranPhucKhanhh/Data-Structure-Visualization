@@ -80,8 +80,6 @@ private:
 	float forceDamping_ = 3.0f;
 	float forceMaxSpeed_ = 700.0f;
 	float forcePadding_ = 36.0f;
-	bool isCanvasDragging_ = false;
-	sf::Vector2i lastDragMousePos_{0, 0};
 
 	sf::Color canvasBgColor_{255, 255, 255, 255};
 	sf::Color nodeBaseColor_{230, 230, 230, 255};

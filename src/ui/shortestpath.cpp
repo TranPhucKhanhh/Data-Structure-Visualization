@@ -86,7 +86,7 @@ namespace {
 	const char* kSettingsCode[] = {
 		"1  FUNCTION updateView():",
 		"2      adjust node radius / edge thickness",
-		"3      pan with drag and zoom with mouse wheel"
+		"3      zoom with mouse wheel"
 	};
 
 	void pickCodeBlock(int menuIndex, const char**& codeArray, int& lineCount, const char*& title) {
@@ -750,7 +750,7 @@ void ShortestPathUI::draw() {
 			}
 			else {
 				ImGui::TextUnformatted("Customize");
-				ImGui::TextWrapped("Use drag + mouse wheel on canvas. These controls adjust visual size.");
+				ImGui::TextWrapped("Use mouse wheel on canvas to zoom. Drag-and-drop is disabled.");
 				ImGui::SliderFloat("Node radius##sp", &nodeRadius_, 16.0f, 48.0f, "%.1f");
 				ImGui::SliderFloat("Edge thickness##sp", &edgeThickness_, 1.0f, 8.0f, "%.1f");
 				ImGui::SliderFloat("Font scale##sp", &fontScale_, 0.75f, 1.8f, "%.2f");
@@ -1000,32 +1000,14 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 	const bool mouseInsideCanvas =
 		mousePos.x >= 0 && mousePos.y >= 0 &&
 		mousePos.x < static_cast<int>(size.x) && mousePos.y < static_cast<int>(size.y);
-	const bool canDragCanvas = mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
+	const bool canInteractCanvas = mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
 
-	if (canDragCanvas) {
+	if (canInteractCanvas) {
 		const float wheel = ImGui::GetIO().MouseWheel;
 		if (std::abs(wheel) > 0.001f) {
 			const float zoomStep = 1.0f + wheel * 0.12f;
 			zoomScale_ = std::clamp(zoomScale_ * zoomStep, 0.55f, 2.2f);
 		}
-	}
-
-	const bool isDragPressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-	if (canDragCanvas && isDragPressed) {
-		if (!isCanvasDragging_) {
-			isCanvasDragging_ = true;
-			lastDragMousePos_ = mousePos;
-		}
-		else {
-			const int deltaX = mousePos.x - lastDragMousePos_.x;
-			const int deltaY = mousePos.y - lastDragMousePos_.y;
-			scrollOffsetX_ += static_cast<float>(deltaX);
-			scrollOffsetY_ += static_cast<float>(deltaY);
-			lastDragMousePos_ = mousePos;
-		}
-	}
-	else {
-		isCanvasDragging_ = false;
 	}
 
 	scrollOffsetX_ = std::clamp(scrollOffsetX_, -10000.0f, 10000.0f);
