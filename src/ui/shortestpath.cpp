@@ -427,6 +427,8 @@ void ShortestPathUI::draw() {
 		ImGui::PopStyleColor();
 		return;
 	}
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
@@ -971,8 +973,6 @@ void ShortestPathUI::draw() {
 	}
 
 	ImGui::End();
-	ImGui::PopStyleVar();
-	ImGui::PopStyleColor();
 }
 
 void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
