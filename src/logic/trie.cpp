@@ -159,7 +159,8 @@ std::vector<TrieInstruction> Trie::insertWordStep(const std::string& _word)
             _current_node->children[_idx] = new TrieNode();
             _steps.push_back(TrieInstruction(TrieOp::CREATE_NODE, _c));
         }
-        else _steps.push_back(TrieInstruction(TrieOp::MOVE_TO_NODE, _c));
+
+        _steps.push_back(TrieInstruction(TrieOp::MOVE_TO_NODE, _c));
 
         _current_node = _current_node->children[_idx];
     }
@@ -208,7 +209,8 @@ std::vector<TrieInstruction> Trie::searchWordStep(const std::string& _word)
             _steps.push_back(TrieInstruction(TrieOp::NOT_FOUND));
             return _steps;
         }
-        else _steps.push_back(TrieInstruction(TrieOp::MOVE_TO_NODE, _c));
+
+        _steps.push_back(TrieInstruction(TrieOp::MOVE_TO_NODE, _c));
         _current_node = _current_node->children[_idx];
     }
 
@@ -424,21 +426,38 @@ void Trie::applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruc
 
     TrieNode* current = root;
     std::string path;
+    bool resetBeforeNextTraversal = false;
     const int count = std::clamp(appliedCount, 0, static_cast<int>(steps.size()));
 
     for (int i = 0; i < count; ++i) {
         const TrieInstruction& step = steps[i];
         switch (step.trie_op) {
-        case TrieOp::MOVE_TO_NODE:
         case TrieOp::CREATE_NODE: {
             if (step.character < 'a' || step.character > 'z') {
                 continue;
             }
+            if (resetBeforeNextTraversal) {
+                current = root;
+                path.clear();
+                resetBeforeNextTraversal = false;
+            }
             const int idx = step.character - 'a';
-            if (step.trie_op == TrieOp::CREATE_NODE && current->children[idx] == nullptr) {
+            if (current->children[idx] == nullptr) {
                 current->children[idx] = new TrieNode();
             }
+            break;
+        }
+        case TrieOp::MOVE_TO_NODE: {
+            if (step.character < 'a' || step.character > 'z') {
+                continue;
+            }
+            if (resetBeforeNextTraversal) {
+                current = root;
+                path.clear();
+                resetBeforeNextTraversal = false;
+            }
 
+            const int idx = step.character - 'a';
             if (current->children[idx] != nullptr) {
                 current = current->children[idx];
                 path.push_back(step.character);
@@ -457,8 +476,10 @@ void Trie::applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruc
             break;
         case TrieOp::UNMARK_END:
             current->is_end_of_word = false;
+            resetBeforeNextTraversal = true;
             break;
         case TrieOp::DELETE_PHYSICAL:
+            resetBeforeNextTraversal = true;
             if (!path.empty()) {
                 const char erased = path.back();
                 path.pop_back();

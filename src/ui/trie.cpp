@@ -50,40 +50,39 @@ namespace {
         return loaded ? &font : nullptr;
     }
 
-    const char* kCreateCode[] = {
-        "1  FUNCTION createTrie(words):",
-        "2      FOR each word in words:",
-        "3          traverse/create nodes by characters",
-        "4          mark end_of_word = true"
-    };
 
     const char* kInsertCode[] = {
-        "1  FUNCTION insert(word):",
-        "2      FOR each char in word:",
-        "3          create node if missing",
-        "4          move to child node",
-        "5      mark end_of_word = true"
+        "1  FUNCTION insert(word, root):",
+        "2      node = root",
+        "3      FOR EACH char in word:",
+        "4          IF char NOT IN node.children THEN node.children[char] = NEW NODE",
+        "5          node = node.children[char]",
+        "6      node.is_end_of_word = true"
     };
 
     const char* kSearchCode[] = {
-        "1  FUNCTION search(word):",
+        "1  FUNCTION search(word, root):",
+        "2      node = root",
         "2      FOR each char in word:",
-        "3          IF child missing: return NOT_FOUND",
-        "4          move to child node",
-        "5      return is_end_of_word"
+        "3          IF char NOT IN node.children THEN return FALSE ",
+        "4          node = node.children[char]",
+        "5      return node.is_end_of_word"
     };
 
     const char* kDeleteCode[] = {
-        "1  FUNCTION delete(word):",
-        "2      traverse to target word",
-        "3      unmark end_of_word",
-        "4      remove redundant nodes bottom-up"
-    };
-
-    const char* kUpdateCode[] = {
-        "1  FUNCTION update(oldWord, newWord):",
-        "2      delete(oldWord)",
-        "3      insert(newWord)"
+        "1  FUNCTION DELETEWORD(node, word, depth):",
+        "4      IF depth = LENGTH(word):",
+        "5          node.is_end_of_word = false",
+        "6          IF node.children IS empty:",
+        "7              DELETE node",
+        "8              RETURN NULL",
+        "9          RETURN node",
+        "10     c = word[depth]",
+        "11     node.children[c] = DELETEWORD(node.children[c], word, depth + 1)",
+        "12     IF node.children IS empty AND node.is_end_of_word == false:",
+        "13         DELETE node",
+        "14         RETURN NULL",
+        "15     RETURN node"
     };
 
     int mapInstructionToCodeLine(const TrieInstruction* instruction, int operationMenuIndex) {
@@ -95,34 +94,26 @@ namespace {
         case 0:
         case 2:
             switch (instruction->trie_op) {
-            case TrieOp::CREATE_NODE: return 3;
-            case TrieOp::MOVE_TO_NODE: return 4;
-            case TrieOp::MARK_END: return 5;
-            default: return 2;
+            case TrieOp::CREATE_NODE: return 4;
+            case TrieOp::MOVE_TO_NODE: return 5;
+            case TrieOp::MARK_END: return 6;
+            default: return 3;
             }
         case 1:
             switch (instruction->trie_op) {
-            case TrieOp::MOVE_TO_NODE: return 4;
-            case TrieOp::NOT_FOUND: return 3;
-            case TrieOp::FOUND_WORD: return 5;
-            default: return 2;
+            case TrieOp::MOVE_TO_NODE: return 5;
+            case TrieOp::NOT_FOUND: return 4;
+            case TrieOp::FOUND_WORD: return 6;
+            default: return 3;
             }
         case 3:
             switch (instruction->trie_op) {
-            case TrieOp::MOVE_TO_NODE: return 2;
+            case TrieOp::MOVE_TO_NODE: return 9;
             case TrieOp::UNMARK_END: return 3;
-            case TrieOp::DELETE_PHYSICAL: return 4;
+            case TrieOp::DELETE_PHYSICAL: return 11;
             case TrieOp::NOT_FOUND: return 2;
             default: return 1;
             }
-        case 4:
-            if (instruction->trie_op == TrieOp::DELETE_PHYSICAL || instruction->trie_op == TrieOp::UNMARK_END) {
-                return 2;
-            }
-            if (instruction->trie_op == TrieOp::CREATE_NODE || instruction->trie_op == TrieOp::MARK_END) {
-                return 3;
-            }
-            return 1;
         default:
             return 1;
         }
@@ -156,29 +147,24 @@ namespace {
     void pickCodeBlock(int operationMenuIndex, const char**& codeArray, int& lineCount, const char*& title) {
         switch (operationMenuIndex) {
         case 0:
-            codeArray = kCreateCode;
-            lineCount = 4;
-            title = "CREATE";
+            codeArray = kInsertCode;
+            lineCount = 6;
+            title = "CREATE / INSERT";
             break;
         case 1:
             codeArray = kSearchCode;
-            lineCount = 5;
+            lineCount = 6;
             title = "SEARCH";
             break;
         case 2:
             codeArray = kInsertCode;
-            lineCount = 5;
+            lineCount = 6;
             title = "INSERT";
             break;
         case 3:
             codeArray = kDeleteCode;
-            lineCount = 4;
+            lineCount = 13;
             title = "REMOVE";
-            break;
-        case 4:
-            codeArray = kUpdateCode;
-            lineCount = 3;
-            title = "UPDATE";
             break;
         default:
             codeArray = nullptr;
@@ -186,6 +172,38 @@ namespace {
             title = "TRIE";
             break;
         }
+    }
+
+    int pickCodeOperationForTimeline(int operationMenuIndex, const std::vector<TrieInstruction>& steps, int displayStepIndex) {
+        if (operationMenuIndex != 4) {
+            return operationMenuIndex;
+        }
+
+        const int currentInstructionIndex = displayStepIndex - 1;
+        if (currentInstructionIndex < 0) {
+            return 3;
+        }
+
+        int insertStartIndex = static_cast<int>(steps.size());
+        bool reachedDeleteResult = false;
+        for (int i = 0; i < static_cast<int>(steps.size()); ++i) {
+            const TrieOp op = steps[static_cast<std::size_t>(i)].trie_op;
+            if (!reachedDeleteResult) {
+                if (op == TrieOp::UNMARK_END || op == TrieOp::NOT_FOUND) {
+                    reachedDeleteResult = true;
+                }
+                continue;
+            }
+
+            if (op == TrieOp::DELETE_PHYSICAL) {
+                continue;
+            }
+
+            insertStartIndex = i;
+            break;
+        }
+
+        return currentInstructionIndex >= insertStartIndex ? 2 : 3;
     }
 
     int countVisibleLeafSlots(TrieNode* node, const std::string& prefix, const std::unordered_set<std::string>* visiblePrefixes) {
@@ -240,7 +258,7 @@ std::string TrieUI::buildActivePath(int appliedCount) const {
     const int count = std::clamp(appliedCount, 0, static_cast<int>(currentSteps_.size()));
     for (int i = 0; i < count; ++i) {
         const TrieInstruction& step = currentSteps_[i];
-        if ((step.trie_op == TrieOp::MOVE_TO_NODE || step.trie_op == TrieOp::CREATE_NODE) && step.character >= 'a' && step.character <= 'z') {
+        if (step.trie_op == TrieOp::MOVE_TO_NODE && step.character >= 'a' && step.character <= 'z') {
             activePath.push_back(step.character);
         }
         else if (step.trie_op == TrieOp::MARK_END || step.trie_op == TrieOp::FOUND_WORD || step.trie_op == TrieOp::NOT_FOUND) {
@@ -645,11 +663,11 @@ void TrieUI::draw() {
         : (operationResult_.empty() ? "Ready" : operationResult_);
 
     const float rightTabWidth = 26.0f;
-    const float rightPanelWidth = 480.0f;
+    const float rightPanelWidth = 550.0f;
     const float commentY = vpPos.y + vpSize.y - 450.0f;
     const float commentH = 115.0f;
-    const float codeY = vpPos.y + vpSize.y - 300.0f;
-    const float codeH = 170.0f;
+    const float codeY = vpPos.y + vpSize.y - 330.0f;
+    const float codeH = 270.0f;
     const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
     const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -711,12 +729,14 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoScrollbar)) {
             if (codePanelOpenT_ > 0.55f) {
+                //ImGui::SetWindowFontScale(0.82f);
                 const char** codeArray = nullptr;
                 int lineCount = 0;
                 const char* opTitle = "TRIE";
-                pickCodeBlock(lastOperationMenuIndex_, codeArray, lineCount, opTitle);
+                const int codeOperationIndex = pickCodeOperationForTimeline(lastOperationMenuIndex_, currentSteps_, displayStepIndex);
+                pickCodeBlock(codeOperationIndex, codeArray, lineCount, opTitle);
                 if (codeArray != nullptr && lineCount > 0) {
-                    const int highlightedLine = mapInstructionToCodeLine(activeInstruction, lastOperationMenuIndex_);
+                    const int highlightedLine = mapInstructionToCodeLine(activeInstruction, codeOperationIndex);
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
                     ImGui::Text("Operation: %s", opTitle);
                     ImGui::Separator();
@@ -934,7 +954,10 @@ void TrieUI::drawSfml(sf::RenderWindow& window) {
         const int applied = std::clamp(revealStepIndex, 0, static_cast<int>(currentSteps_.size()));
         for (int i = 0; i < applied; ++i) {
             const TrieInstruction& step = currentSteps_[i];
-            if ((step.trie_op == TrieOp::MOVE_TO_NODE || step.trie_op == TrieOp::CREATE_NODE) && step.character >= 'a' && step.character <= 'z') {
+            if (step.trie_op == TrieOp::CREATE_NODE && step.character >= 'a' && step.character <= 'z') {
+                visiblePrefixes.insert(currentPrefix + step.character);
+            }
+            else if (step.trie_op == TrieOp::MOVE_TO_NODE && step.character >= 'a' && step.character <= 'z') {
                 currentPrefix.push_back(step.character);
                 visiblePrefixes.insert(currentPrefix);
             }
