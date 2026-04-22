@@ -73,7 +73,7 @@ private:
 	std::vector<sf::Vector2f> forceNodeVelocities_;
 	bool forceLayoutDirty_ = true;
 	sf::Vector2u forceLayoutCanvasSize_{0u, 0u};
-	float forceRepelK_ = 2400000.0f;
+	float forceRepelK_ = 3000000.0f;
 	float forceSpringKMin_ = 0.45f;
 	float forceSpringKMax_ = 1.35f;
 	float forceCenterK_ = 3.0f;

@@ -1160,7 +1160,7 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 			const float t = std::clamp(static_cast<float>(w - minWeight) / denom, 0.0f, 1.0f);
 			// Heavier edges use softer spring, lighter edges pull tighter.
 			const float springK = std::clamp(lerp(forceSpringKMax_, forceSpringKMin_, t), forceSpringKMin_, forceSpringKMax_) * springDensityScale;
-			const float restLength = lerp(180.0f, 1000.0f, t);
+			const float restLength = lerp(200.0f, 1000.0f, t);
 
 			sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(u)] - forceNodePositions_[static_cast<std::size_t>(v)];
 			float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
