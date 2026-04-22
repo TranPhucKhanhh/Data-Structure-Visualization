@@ -64,25 +64,22 @@ namespace {
         "1  FUNCTION search(word, root):",
         "2      node = root",
         "2      FOR each char in word:",
-        "3          IF char NOT IN node.children THEN return FALSE ",
+        "3          IF char NOT IN node.children THEN return false ",
         "4          node = node.children[char]",
         "5      return node.is_end_of_word"
     };
 
     const char* kDeleteCode[] = {
-        "1  FUNCTION DELETEWORD(node, word, depth):",
-        "4      IF depth = LENGTH(word):",
-        "5          node.is_end_of_word = false",
-        "6          IF node.children IS empty:",
-        "7              DELETE node",
-        "8              RETURN NULL",
-        "9          RETURN node",
-        "10     c = word[depth]",
-        "11     node.children[c] = DELETEWORD(node.children[c], word, depth + 1)",
-        "12     IF node.children IS empty AND node.is_end_of_word == false:",
-        "13         DELETE node",
-        "14         RETURN NULL",
-        "15     RETURN node"
+        "1  FUNCTION deleteWord(node, word, depth):",
+		"2      IF node IS NULL: RETURN NULL",
+        "3      IF depth = LENGTH(word): node.is_end_of_word = false",
+        "4      ELSE:",
+        "5          c = word[depth]",
+        "6          node.children[c] = deleteWord(node.children[c], word, depth + 1)",
+        "7      IF node.children IS empty AND node.is_end_of_word == false:",
+        "8          DELETE node",
+        "9          RETURN NULL",
+        "10      RETURN node"
     };
 
     int mapInstructionToCodeLine(const TrieInstruction* instruction, int operationMenuIndex) {
@@ -108,9 +105,11 @@ namespace {
             }
         case 3:
             switch (instruction->trie_op) {
-            case TrieOp::MOVE_TO_NODE: return 9;
+            case TrieOp::MOVE_TO_NODE: return 4;
             case TrieOp::UNMARK_END: return 3;
-            case TrieOp::DELETE_PHYSICAL: return 11;
+            case TrieOp::DELETE_PHYSICAL: return 7;
+            case TrieOp::RETURN_NODE: return 10;
+            case TrieOp::RETURN_NULL: return 2;
             case TrieOp::NOT_FOUND: return 2;
             default: return 1;
             }
@@ -139,9 +138,42 @@ namespace {
             return "Unmark end of word";
         case TrieOp::DELETE_PHYSICAL:
             return "Delete redundant node";
+        case TrieOp::RETURN_NODE:
+            return instruction->character >= 'a' && instruction->character <= 'z'
+                ? std::string("Return current node after processing '") + instruction->character + "'"
+                : "Return current node";
+        case TrieOp::RETURN_NULL:
+            return "Return NULL";
         default:
             return "Processing";
         }
+    }
+
+    std::vector<int> mapInstructionToCodeLines(const TrieInstruction* instruction, int operationMenuIndex) {
+        if (instruction == nullptr) {
+            return {1};
+        }
+
+        if (operationMenuIndex == 3) {
+            switch (instruction->trie_op) {
+            case TrieOp::MOVE_TO_NODE:
+                return {4, 5, 6};
+            case TrieOp::DELETE_PHYSICAL:
+                return {7, 8, 9};
+            case TrieOp::UNMARK_END:
+                return {3};
+            case TrieOp::RETURN_NODE:
+                return {10};
+            case TrieOp::RETURN_NULL:
+                return {2};
+            case TrieOp::NOT_FOUND:
+                return {2};
+            default:
+                return {1};
+            }
+        }
+
+        return {mapInstructionToCodeLine(instruction, operationMenuIndex)};
     }
 
     void pickCodeBlock(int operationMenuIndex, const char**& codeArray, int& lineCount, const char*& title) {
@@ -163,7 +195,7 @@ namespace {
             break;
         case 3:
             codeArray = kDeleteCode;
-            lineCount = 13;
+            lineCount = 10;
             title = "REMOVE";
             break;
         default:
@@ -185,22 +217,24 @@ namespace {
         }
 
         int insertStartIndex = static_cast<int>(steps.size());
-        bool reachedDeleteResult = false;
+        bool oldWordWasDeleted = false;
         for (int i = 0; i < static_cast<int>(steps.size()); ++i) {
             const TrieOp op = steps[static_cast<std::size_t>(i)].trie_op;
-            if (!reachedDeleteResult) {
-                if (op == TrieOp::UNMARK_END || op == TrieOp::NOT_FOUND) {
-                    reachedDeleteResult = true;
+            if (!oldWordWasDeleted) {
+                if (op == TrieOp::UNMARK_END) {
+                    oldWordWasDeleted = true;
                 }
                 continue;
             }
 
-            if (op == TrieOp::DELETE_PHYSICAL) {
+            if (op == TrieOp::DELETE_PHYSICAL || op == TrieOp::RETURN_NODE || op == TrieOp::RETURN_NULL) {
                 continue;
             }
 
-            insertStartIndex = i;
-            break;
+            if (op == TrieOp::CREATE_NODE || op == TrieOp::MOVE_TO_NODE || op == TrieOp::MARK_END) {
+                insertStartIndex = i;
+                break;
+            }
         }
 
         return currentInstructionIndex >= insertStartIndex ? 2 : 3;
@@ -264,6 +298,12 @@ std::string TrieUI::buildActivePath(int appliedCount) const {
         else if (step.trie_op == TrieOp::MARK_END || step.trie_op == TrieOp::FOUND_WORD || step.trie_op == TrieOp::NOT_FOUND) {
             // A word-level operation is finished; start tracking the next word from root.
             activePath.clear();
+        }
+        else if (step.trie_op == TrieOp::DELETE_PHYSICAL && !activePath.empty()) {
+            activePath.pop_back();
+        }
+        else if (step.trie_op == TrieOp::RETURN_NODE && step.character >= 'a' && step.character <= 'z' && !activePath.empty()) {
+            activePath.pop_back();
         }
     }
     return activePath;
@@ -736,12 +776,12 @@ void TrieUI::draw() {
                 const int codeOperationIndex = pickCodeOperationForTimeline(lastOperationMenuIndex_, currentSteps_, displayStepIndex);
                 pickCodeBlock(codeOperationIndex, codeArray, lineCount, opTitle);
                 if (codeArray != nullptr && lineCount > 0) {
-                    const int highlightedLine = mapInstructionToCodeLine(activeInstruction, codeOperationIndex);
+                    const std::vector<int> highlightedLines = mapInstructionToCodeLines(activeInstruction, codeOperationIndex);
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
                     ImGui::Text("Operation: %s", opTitle);
                     ImGui::Separator();
                     for (int i = 0; i < lineCount; ++i) {
-                        if ((i + 1) == highlightedLine) {
+                        if (std::find(highlightedLines.begin(), highlightedLines.end(), i + 1) != highlightedLines.end()) {
                             ImGui::TextColored(ImVec4(0.82f, 0.12f, 0.08f, 1.0f), "> %s", codeArray[i]);
                         }
                         else {
@@ -848,7 +888,7 @@ void TrieUI::draw() {
         }
     }
 
-    if (!ImGui::GetIO().WantTextInput && autoplay_ && playbackMode_ == TriePlaybackMode::RunAtOnce && currentStepIndex_ < static_cast<int>(currentSteps_.size()) && !stepTransitioning_) {
+    if (autoplay_ && playbackMode_ == TriePlaybackMode::RunAtOnce && currentStepIndex_ < static_cast<int>(currentSteps_.size()) && !stepTransitioning_) {
         autoplayAccumulator_ += dt * playbackSpeed_;
         constexpr float kStepInterval = 0.45f;
         while (autoplayAccumulator_ >= kStepInterval && currentStepIndex_ < static_cast<int>(currentSteps_.size()) && !stepTransitioning_) {
@@ -1055,11 +1095,16 @@ void TrieUI::drawTrieNode(
             fill = secondaryNodeColor_;
             break;
         case TrieOp::NOT_FOUND:
+        case TrieOp::RETURN_NULL:
             fill = deleteNodeColor_;
             break;
         case TrieOp::UNMARK_END:
+            fill = deleteNodeColor_;
+            break;
         case TrieOp::DELETE_PHYSICAL:
             fill = deleteNodeColor_;
+            break;
+        case TrieOp::RETURN_NODE:
             break;
         case TrieOp::CREATE_NODE:
             fill = sf::Color(96, 165, 250, 255);

@@ -300,10 +300,14 @@ bool Trie::deleteHelperStep(TrieNode* _current, std::string _word, int _index, s
             _steps.push_back(TrieInstruction(TrieOp::UNMARK_END));
         }
         else {
-            _steps.push_back(TrieInstruction(TrieOp::NOT_FOUND));
+            _steps.push_back(TrieInstruction(TrieOp::RETURN_NODE));
             return false;
         }
-        return isEmpty(_current);
+        const bool can_delete_current = isEmpty(_current);
+        if (!can_delete_current) {
+            _steps.push_back(TrieInstruction(TrieOp::RETURN_NODE));
+        }
+        return can_delete_current;
     }
 
     char _char_to_find = _word[_index];
@@ -311,7 +315,7 @@ bool Trie::deleteHelperStep(TrieNode* _current, std::string _word, int _index, s
     if (_current->children[_idx] == nullptr)
     {
         //Word not found
-        _steps.push_back(TrieInstruction(TrieOp::NOT_FOUND));
+        _steps.push_back(TrieInstruction(TrieOp::RETURN_NULL));
         return false;
     }
 
@@ -325,9 +329,14 @@ bool Trie::deleteHelperStep(TrieNode* _current, std::string _word, int _index, s
         delete _current->children[_idx];
         _current->children[_idx] = nullptr;
 
-        return !_current->is_end_of_word && isEmpty(_current);
+        const bool can_delete_current = !_current->is_end_of_word && isEmpty(_current);
+        if (!can_delete_current) {
+            _steps.push_back(TrieInstruction(TrieOp::RETURN_NODE, _char_to_find));
+        }
+        return can_delete_current;
     }
 
+    _steps.push_back(TrieInstruction(TrieOp::RETURN_NODE, _char_to_find));
     return false;
 }
 
@@ -348,9 +357,21 @@ std::vector<TrieInstruction> Trie::updateWordStep(const std::string& _old_word, 
     std::vector<TrieInstruction> _all_steps;
 
     std::vector<TrieInstruction> _delete_steps = deleteWordStep(_old_word);
-    std::vector<TrieInstruction> _insert_steps = insertWordStep(_new_word);
-
     _all_steps.insert(_all_steps.end(), _delete_steps.begin(), _delete_steps.end());
+
+    bool old_word_was_found = false;
+    for (const TrieInstruction& _step : _delete_steps) {
+        if (_step.trie_op == TrieOp::UNMARK_END) {
+            old_word_was_found = true;
+            break;
+        }
+    }
+
+    if (!old_word_was_found) {
+        return _all_steps;
+    }
+
+    std::vector<TrieInstruction> _insert_steps = insertWordStep(_new_word);
     _all_steps.insert(_all_steps.end(), _insert_steps.begin(), _insert_steps.end());
 
     return _all_steps;
@@ -509,6 +530,10 @@ void Trie::applyStepsToPreviewTrie(TrieNode* root, const std::vector<TrieInstruc
         case TrieOp::NOT_FOUND:
             current = root;
             path.clear();
+            break;
+        case TrieOp::RETURN_NULL:
+            break;
+        case TrieOp::RETURN_NODE:
             break;
         }
     }

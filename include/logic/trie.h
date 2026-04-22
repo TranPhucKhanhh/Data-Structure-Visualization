@@ -16,7 +16,9 @@ enum class TrieOp
     FOUND_WORD,     //
     NOT_FOUND,      //
     UNMARK_END,     //
-    DELETE_PHYSICAL //Delete the node from the memory
+    DELETE_PHYSICAL, //Delete the node from the memory
+	RETURN_NODE,     // Return node to parent after processing a child node in deletion
+	RETURN_NULL      // Return null when delete reaches a missing node
 };
 
 struct TrieInstruction {
