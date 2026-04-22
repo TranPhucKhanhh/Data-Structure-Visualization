@@ -86,7 +86,7 @@ namespace {
 	const char* kSettingsCode[] = {
 		"1  FUNCTION updateView():",
 		"2      adjust node radius / edge thickness",
-		"3      zoom with mouse wheel"
+		"3      drag node + zoom with mouse wheel"
 	};
 
 	void pickCodeBlock(int menuIndex, const char**& codeArray, int& lineCount, const char*& title) {
@@ -750,7 +750,7 @@ void ShortestPathUI::draw() {
 			}
 			else {
 				ImGui::TextUnformatted("Customize");
-				ImGui::TextWrapped("Use mouse wheel on canvas to zoom. Drag-and-drop is disabled.");
+				ImGui::TextWrapped("Drag node with left mouse button. Use mouse wheel on canvas to zoom.");
 				ImGui::SliderFloat("Node radius##sp", &nodeRadius_, 16.0f, 48.0f, "%.1f");
 				ImGui::SliderFloat("Edge thickness##sp", &edgeThickness_, 1.0f, 8.0f, "%.1f");
 				ImGui::SliderFloat("Font scale##sp", &fontScale_, 0.75f, 1.8f, "%.2f");
@@ -993,6 +993,9 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 	window.draw(background);
 
 	if (vertexCount_ <= 0) {
+		isNodeDragging_ = false;
+		draggedNodeIndex_ = -1;
+		wasLeftMousePressed_ = false;
 		return;
 	}
 
@@ -1036,6 +1039,65 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 	const float radius = std::clamp(nodeRadius_ * zoomScale_, 12.0f, 84.0f);
 	const sf::Vector2f center(static_cast<float>(size.x) * 0.5f + scrollOffsetX_, static_cast<float>(size.y) * 0.44f + scrollOffsetY_);
 	ensureForceLayoutState(size);
+	if (draggedNodeIndex_ >= vertexCount_) {
+		isNodeDragging_ = false;
+		draggedNodeIndex_ = -1;
+	}
+
+	const bool leftMousePressed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+	const float safeZoom = std::max(zoomScale_, 0.001f);
+	const sf::Vector2f mouseWorldPos(
+		(static_cast<float>(mousePos.x) - center.x) / safeZoom,
+		(static_cast<float>(mousePos.y) - center.y) / safeZoom
+	);
+
+	if (canInteractCanvas && leftMousePressed && !wasLeftMousePressed_) {
+		float bestDist2 = std::numeric_limits<float>::max();
+		int bestIndex = -1;
+		const float pickRadius = radius * 1.12f;
+		const float pickRadius2 = pickRadius * pickRadius;
+		for (int i = 0; i < vertexCount_; ++i) {
+			const sf::Vector2f screenPos(
+				center.x + forceNodePositions_[static_cast<std::size_t>(i)].x * zoomScale_,
+				center.y + forceNodePositions_[static_cast<std::size_t>(i)].y * zoomScale_
+			);
+			const float dx = static_cast<float>(mousePos.x) - screenPos.x;
+			const float dy = static_cast<float>(mousePos.y) - screenPos.y;
+			const float dist2 = dx * dx + dy * dy;
+			if (dist2 <= pickRadius2 && dist2 < bestDist2) {
+				bestDist2 = dist2;
+				bestIndex = i;
+			}
+		}
+
+		if (bestIndex >= 0) {
+			isNodeDragging_ = true;
+			draggedNodeIndex_ = bestIndex;
+			dragOffsetWorld_ = forceNodePositions_[static_cast<std::size_t>(bestIndex)] - mouseWorldPos;
+			lastMouseWorldPos_ = mouseWorldPos;
+		}
+	}
+
+	if (isNodeDragging_ && draggedNodeIndex_ >= 0 && canInteractCanvas && leftMousePressed) {
+		lastMouseWorldPos_ = mouseWorldPos;
+	}
+
+	if (isNodeDragging_ && draggedNodeIndex_ >= 0 && (!leftMousePressed || !canInteractCanvas)) {
+		const sf::Vector2f releaseDelta = mouseWorldPos - lastMouseWorldPos_;
+		const float releaseDt = std::max(dt, 0.001f);
+		sf::Vector2f releaseVelocity = (releaseDelta / releaseDt) * 0.15f;
+		const float releaseSpeed2 = releaseVelocity.x * releaseVelocity.x + releaseVelocity.y * releaseVelocity.y;
+		const float maxReleaseSpeed = forceMaxSpeed_ * 0.55f;
+		const float maxReleaseSpeed2 = maxReleaseSpeed * maxReleaseSpeed;
+		if (releaseSpeed2 > maxReleaseSpeed2 && releaseSpeed2 > 0.0001f) {
+			const float invLen = 1.0f / std::sqrt(releaseSpeed2);
+			releaseVelocity.x = releaseVelocity.x * invLen * maxReleaseSpeed;
+			releaseVelocity.y = releaseVelocity.y * invLen * maxReleaseSpeed;
+		}
+		forceNodeVelocities_[static_cast<std::size_t>(draggedNodeIndex_)] = releaseVelocity;
+		isNodeDragging_ = false;
+		draggedNodeIndex_ = -1;
+	}
 
 	// Step 2 (force mode): pairwise electrostatic repulsion F = k / d^2.
 	if (vertexCount_ > 1) {
@@ -1098,7 +1160,7 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 			const float t = std::clamp(static_cast<float>(w - minWeight) / denom, 0.0f, 1.0f);
 			// Heavier edges use softer spring, lighter edges pull tighter.
 			const float springK = std::clamp(lerp(forceSpringKMax_, forceSpringKMin_, t), forceSpringKMin_, forceSpringKMax_) * springDensityScale;
-			const float restLength = lerp(180.0f, 1000.0f, t);
+			const float restLength = lerp(200.0f, 1000.0f, t);
 
 			sf::Vector2f delta = forceNodePositions_[static_cast<std::size_t>(u)] - forceNodePositions_[static_cast<std::size_t>(v)];
 			float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
@@ -1129,6 +1191,11 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 		for (int i = 0; i < vertexCount_; ++i) {
 			sf::Vector2f& velocity = forceNodeVelocities_[static_cast<std::size_t>(i)];
 			sf::Vector2f& position = forceNodePositions_[static_cast<std::size_t>(i)];
+			if (isNodeDragging_ && i == draggedNodeIndex_ && canInteractCanvas && leftMousePressed) {
+				position = mouseWorldPos + dragOffsetWorld_;
+				velocity = sf::Vector2f(0.0f, 0.0f);
+				continue;
+			}
 			const sf::Vector2f netForce = forces[static_cast<std::size_t>(i)];
 
 			velocity += netForce * simDt;
@@ -1183,15 +1250,34 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 				if (dist < separationDist) {
 					const sf::Vector2f dir(delta.x / dist, delta.y / dist);
 					const float overlap = separationDist - dist;
-					const sf::Vector2f push = dir * (0.5f * overlap);
-					forceNodePositions_[static_cast<std::size_t>(i)] += push;
-					forceNodePositions_[static_cast<std::size_t>(j)] -= push;
-					forceNodeVelocities_[static_cast<std::size_t>(i)] *= 0.92f;
-					forceNodeVelocities_[static_cast<std::size_t>(j)] *= 0.92f;
+					const bool dragI = isNodeDragging_ && i == draggedNodeIndex_ && canInteractCanvas && leftMousePressed;
+					const bool dragJ = isNodeDragging_ && j == draggedNodeIndex_ && canInteractCanvas && leftMousePressed;
+					if (dragI && !dragJ) {
+						forceNodePositions_[static_cast<std::size_t>(j)] -= dir * overlap;
+						forceNodeVelocities_[static_cast<std::size_t>(j)] *= 0.92f;
+					}
+					else if (!dragI && dragJ) {
+						forceNodePositions_[static_cast<std::size_t>(i)] += dir * overlap;
+						forceNodeVelocities_[static_cast<std::size_t>(i)] *= 0.92f;
+					}
+					else if (!dragI && !dragJ) {
+						const sf::Vector2f push = dir * (0.5f * overlap);
+						forceNodePositions_[static_cast<std::size_t>(i)] += push;
+						forceNodePositions_[static_cast<std::size_t>(j)] -= push;
+						forceNodeVelocities_[static_cast<std::size_t>(i)] *= 0.92f;
+						forceNodeVelocities_[static_cast<std::size_t>(j)] *= 0.92f;
+					}
 				}
 			}
 		}
 	}
+
+	if (isNodeDragging_ && draggedNodeIndex_ >= 0 && canInteractCanvas && leftMousePressed) {
+		forceNodePositions_[static_cast<std::size_t>(draggedNodeIndex_)] = mouseWorldPos + dragOffsetWorld_;
+		forceNodeVelocities_[static_cast<std::size_t>(draggedNodeIndex_)] = sf::Vector2f(0.0f, 0.0f);
+	}
+
+	wasLeftMousePressed_ = leftMousePressed;
 
 	std::vector<sf::Vector2f> nodePos(static_cast<std::size_t>(vertexCount_));
 	for (int i = 0; i < vertexCount_; ++i) {
