@@ -73,13 +73,18 @@ private:
 	std::vector<sf::Vector2f> forceNodeVelocities_;
 	bool forceLayoutDirty_ = true;
 	sf::Vector2u forceLayoutCanvasSize_{0u, 0u};
-	float forceRepelK_ = 2400000.0f;
+	float forceRepelK_ = 3000000.0f;
 	float forceSpringKMin_ = 0.45f;
 	float forceSpringKMax_ = 1.35f;
-	float forceCenterK_ = 2.0f;
+	float forceCenterK_ = 3.0f;
 	float forceDamping_ = 3.0f;
 	float forceMaxSpeed_ = 700.0f;
 	float forcePadding_ = 36.0f;
+	bool isNodeDragging_ = false;
+	int draggedNodeIndex_ = -1;
+	sf::Vector2f dragOffsetWorld_{0.0f, 0.0f};
+	sf::Vector2f lastMouseWorldPos_{0.0f, 0.0f};
+	bool wasLeftMousePressed_ = false;
 
 	sf::Color canvasBgColor_{255, 255, 255, 255};
 	sf::Color nodeBaseColor_{230, 230, 230, 255};
