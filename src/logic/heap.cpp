@@ -64,6 +64,7 @@ std::vector<HeapInstruction> Heap::heapifyDownStep(int id) {
 			target = right;
 		}
 		if (target == id) {
+			instructions.push_back(HeapInstruction(HeapOp::HeapifyDownDone, id));
 			break;
 		}
 		instructions.push_back(HeapInstruction(target == left ? HeapOp::SwapLeftChild : HeapOp::SwapRightChild, target));
@@ -186,6 +187,7 @@ std::vector<HeapInstruction> Heap::initFromListStep(const std::vector<int>& list
 		std::vector<HeapInstruction> tmp = heapifyDownStep(i);
 		instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
 	}
+	instructions.push_back(HeapInstruction(HeapOp::ReturnHeap));
 	return instructions;
 }
 
@@ -222,6 +224,7 @@ std::vector<HeapInstruction> Heap::insertValueStep(const int& val)
 	instructions.push_back(HeapInstruction(HeapOp::AddBackValue, val));
 	std::vector<HeapInstruction> tmp = heapifyUpStep(((int) heap.size()) - 1);
 	instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
+	instructions.push_back(HeapInstruction(HeapOp::ReturnHeap));
 	return instructions;
 }
 
@@ -238,6 +241,7 @@ std::vector<HeapInstruction> Heap::deleteTopStep()
 		std::vector<HeapInstruction> tmp = heapifyDownStep(0);
 		instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
 	}
+	instructions.push_back(HeapInstruction(HeapOp::ReturnHeap));
 	return instructions;
 }
 
@@ -261,9 +265,11 @@ std::vector<HeapInstruction> Heap::updateValueStep(const int& old_value, const i
 			}
 
 			instructions.insert(std::end(instructions), std::begin(tmp), std::end(tmp));
+			instructions.push_back(HeapInstruction(HeapOp::ReturnHeap));
 			return instructions;
 		}
 	}
+	instructions.push_back(HeapInstruction(HeapOp::NotFound));
 	return instructions;
 }
 
@@ -319,6 +325,15 @@ void Heap::applyInstructions(std::vector<int> &state, const HeapInstruction &ins
     case HeapOp::VisitStraight:
         {
             cursor_idx = instruction.data;
+            break;
+        }
+    case HeapOp::HeapifyDownDone:
+        {
+            cursor_idx = instruction.data;
+            break;
+        }
+    case HeapOp::ReturnHeap:
+        {
             break;
         }
     case HeapOp::UpdateValue:

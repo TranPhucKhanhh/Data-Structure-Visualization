@@ -18,6 +18,8 @@ enum class HeapOp {
 	UpdateValue,    // Update the value of the current node to 'data'
 	AddBackValue,   // Add a new node with value 'data' to the back of the heap vecctor
 	MoveBackToTop,  // Move the back value to the top of the heap and delete the back value
+	HeapifyDownDone, // The down-heap loop stops because the heap property is satisfied
+	ReturnHeap,     // Return after a successful heap operation
 	FoundValue,     // Search found the value
 	NotFound,       // Search did not find the value
 };

@@ -48,44 +48,74 @@ namespace {
 
 	const char* kCreateCode[] = {
 		"1  FUNCTION createHeap(values):",
-		"2      build heap from array",
-		"3      heapifyDown from last parent",
-		"4      done"
+		"2      heap = values",
+		"3      FOR i = heap.size / 2 - 1 DOWNTO 0:",
+		"4          current = i",
+		"5          WHILE true:",
+		"6              left = 2 * current + 1; right = 2 * current + 2; target = current",
+		"7              IF left < heap.size AND !compare(target, left): target = left",
+		"8              IF right < heap.size AND !compare(target, right): target = right",
+		"9              IF target == current: BREAK",
+		"10             SWAP(heap[current], heap[target]); current = target",
+		"11     RETURN heap"
 	};
 
 	const char* kSearchCode[] = {
 		"1  FUNCTION search(value):",
-		"2      visit next array node",
-		"3      RETURN Found",
-		"4      RETURN Not Found"
+		"2      FOR i = 0 TO heap.size - 1:",
+		"3          IF heap[i] == value: RETURN true",
+		"4      RETURN false"
 	};
 
 	const char* kInsertCode[] = {
 		"1  FUNCTION insert(value):",
-		"2      push value at back",
-		"3      while parent violates heap: swap up",
-		"4      done"
+		"2      heap.push_back(value)",
+		"3      i = heap.size - 1",
+		"4      WHILE i > 0 AND !compare(parent(i), i):",
+		"5          SWAP(heap[i], heap[parent(i)])",
+		"6          i = parent(i)",
+		"7      RETURN heap"
 	};
 
 	const char* kRemoveCode[] = {
 		"1  FUNCTION removeTop():",
-		"2      move last node to root",
-		"3      heapifyDown from root",
-		"4      done"
+		"2      IF heap.empty(): RETURN",
+		"3      heap[0] = heap.back(); heap.pop_back()",
+		"4      current = 0",
+		"5      WHILE true:",
+		"6          left = 2 * current + 1; right = 2 * current + 2; target = current",
+		"7          IF left < heap.size AND !compare(target, left): target = left",
+		"8          IF right < heap.size AND !compare(target, right): target = right",
+		"9          IF target == current: BREAK",
+		"10         SWAP(heap[current], heap[target]); current = target",
+		"11     RETURN heap"
 	};
 
 	const char* kUpdateCode[] = {
 		"1  FUNCTION update(oldValue, newValue):",
-		"2      find oldValue",
-		"3      assign newValue",
-		"4      heapifyUp or heapifyDown"
+		"2      FOR i = 0 TO heap.size - 1:",
+		"3          IF heap[i] == oldValue: BREAK",
+		"4      IF i == heap.size: RETURN false",
+		"5      heap[i] = newValue",
+		"6      IF i > 0 AND !compare(parent(i), i):",
+		"7          WHILE i > 0 AND !compare(parent(i), i):",
+		"8              SWAP(heap[i], heap[parent(i)])",
+		"9              i = parent(i)",
+		"10     ELSE:",
+		"11         WHILE true:",
+		"12             left = 2 * i + 1; right = 2 * i + 2; target = i",
+		"13             IF left < heap.size AND !compare(target, left): target = left",
+		"14             IF right < heap.size AND !compare(target, right): target = right",
+		"15             IF target == i: BREAK",
+		"16             SWAP(heap[i], heap[target]); i = target",
+		"17     RETURN true"
 	};
 
 	void pickCodeBlock(int opIndex, const char**& codeArray, int& lineCount, const char*& title) {
 		switch (opIndex) {
 		case 0:
 			codeArray = kCreateCode;
-			lineCount = 4;
+			lineCount = 11;
 			title = "CREATE";
 			break;
 		case 1:
@@ -95,17 +125,17 @@ namespace {
 			break;
 		case 2:
 			codeArray = kInsertCode;
-			lineCount = 4;
+			lineCount = 7;
 			title = "INSERT";
 			break;
 		case 3:
 			codeArray = kRemoveCode;
-			lineCount = 4;
+			lineCount = 11;
 			title = "REMOVE";
 			break;
 		case 4:
 			codeArray = kUpdateCode;
-			lineCount = 4;
+			lineCount = 17;
 			title = "UPDATE";
 			break;
 		default:
@@ -116,66 +146,96 @@ namespace {
 		}
 	}
 
-	int mapInstructionToCodeLine(const HeapInstruction* instruction, int opIndex, bool operationFinished) {
-		if (operationFinished) {
+	std::vector<int> mapInstructionToCodeLines(const HeapInstruction* instruction, int opIndex, bool operationFinished) {
+		if (operationFinished && !(instruction != nullptr && instruction->heap_op == HeapOp::NotFound)) {
 			switch (opIndex) {
 			case 0:
+				return {11};
 			case 2:
+				return {7};
 			case 3:
+				return {11};
 			case 4:
-				return 4;
+				return {17};
 			default:
 				break;
 			}
 		}
 
 		if (instruction == nullptr) {
-			return 1;
+			return {1};
 		}
 
 		switch (opIndex) {
 		case 0:
-			if (instruction->heap_op == HeapOp::SwapLeftChild || instruction->heap_op == HeapOp::SwapRightChild) {
-				return 3;
+			if (instruction->heap_op == HeapOp::ReturnHeap) {
+				return {11};
 			}
-			return 2;
+			if (instruction->heap_op == HeapOp::SwapLeftChild || instruction->heap_op == HeapOp::SwapRightChild) {
+				return {5, 6, 7, 8, 10};
+			}
+			if (instruction->heap_op == HeapOp::HeapifyDownDone) {
+				return {5, 6, 7, 8, 9};
+			}
+			return {3, 4};
 		case 1:
 			if (instruction->heap_op == HeapOp::FoundValue) {
-				return 3;
+				return {3};
 			}
 			if (instruction->heap_op == HeapOp::NotFound) {
-				return 4;
+				return {4};
 			}
-			return 2;
+			return {2};
 		case 2:
+			if (instruction->heap_op == HeapOp::ReturnHeap) {
+				return {7};
+			}
 			if (instruction->heap_op == HeapOp::AddBackValue) {
-				return 2;
+				return {2, 3};
 			}
 			if (instruction->heap_op == HeapOp::SwapParent) {
-				return 3;
+				return {4, 5, 6};
 			}
-			return 4;
+			return {7};
 		case 3:
+			if (instruction->heap_op == HeapOp::ReturnHeap) {
+				return {11};
+			}
 			if (instruction->heap_op == HeapOp::MoveBackToTop) {
-				return 2;
+				return {2, 3, 4};
 			}
 			if (instruction->heap_op == HeapOp::SwapLeftChild || instruction->heap_op == HeapOp::SwapRightChild) {
-				return 3;
+				return {5, 6, 7, 8, 10};
 			}
-			return 4;
+			if (instruction->heap_op == HeapOp::HeapifyDownDone) {
+				return {5, 6, 7, 8, 9};
+			}
+			return {11};
 		case 4:
+			if (instruction->heap_op == HeapOp::ReturnHeap) {
+				return {17};
+			}
 			if (instruction->heap_op == HeapOp::VisitStraight) {
-				return 2;
+				return {2, 3};
 			}
 			if (instruction->heap_op == HeapOp::UpdateValue) {
-				return 3;
+				return {5};
 			}
-			if (instruction->heap_op == HeapOp::SwapParent || instruction->heap_op == HeapOp::SwapLeftChild || instruction->heap_op == HeapOp::SwapRightChild) {
-				return 4;
+			if (instruction->heap_op == HeapOp::SwapParent) {
+				return {6, 7, 8, 9};
 			}
-			return 2;
+			if (instruction->heap_op == HeapOp::SwapLeftChild || instruction->heap_op == HeapOp::SwapRightChild) {
+				return {10, 11, 12, 13, 14, 16};
+			}
+			if (instruction->heap_op == HeapOp::HeapifyDownDone) {
+				return {10, 11, 12, 13, 14, 15};
+			}
+			if (instruction->heap_op == HeapOp::NotFound) {
+				return {4};
+			}
+			return {2, 3};
 		default:
-			return 1;
+			return {1};
 		}
 	}
 
@@ -199,6 +259,10 @@ namespace {
 			return std::string("Add ") + std::to_string(instruction->data) + " at back";
 		case HeapOp::MoveBackToTop:
 			return "Move back node to top";
+		case HeapOp::HeapifyDownDone:
+			return "Heap property satisfied";
+		case HeapOp::ReturnHeap:
+			return "Return heap";
 		case HeapOp::FoundValue:
 			return "Found value";
 		case HeapOp::NotFound:
@@ -224,8 +288,8 @@ void HeapUI::rebuildViewFromStep(int stepIndex) {
 		int _old_cursor = displayCursorIndex_;
         heap.applyInstructions(timelineHeap_, step, displayCursorIndex_);
 
-        if (step.heap_op == HeapOp::SwapLeftChild ||
-            step.heap_op == HeapOp::SwapRightChild ||
+        if (step.heap_op == HeapOp::SwapParent ||
+            step.heap_op == HeapOp::SwapLeftChild ||
             step.heap_op == HeapOp::SwapRightChild)
         {
             secondaryIndex_ = _old_cursor;
@@ -568,11 +632,11 @@ void HeapUI::draw() {
 		: (operationResult_.empty() ? "Ready" : operationResult_);
 
 	const float rightTabWidth = 26.0f;
-	const float rightPanelWidth = 480.0f;
-	const float commentY = vpPos.y + vpSize.y - 450.0f;
+	const float rightPanelWidth = 550.0f;
+	const float commentY = vpPos.y + vpSize.y - 600.0f;
 	const float commentH = 115.0f;
-	const float codeY = vpPos.y + vpSize.y - 300.0f;
-	const float codeH = 170.0f;
+	const float codeY = vpPos.y + vpSize.y - 460.0f;
+	const float codeH = 400.0f;
 	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
 	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -633,12 +697,12 @@ void HeapUI::draw() {
 				pickCodeBlock(lastOperationMenuIndex_, codeArray, lineCount, opTitle);
 				if (codeArray != nullptr && lineCount > 0) {
 					const bool operationFinished = !stepTransitioning_ && !currentSteps_.empty() && currentStepIndex_ >= static_cast<int>(currentSteps_.size());
-					const int highlightedLine = mapInstructionToCodeLine(activeInstruction, lastOperationMenuIndex_, operationFinished);
+					const std::vector<int> highlightedLines = mapInstructionToCodeLines(activeInstruction, lastOperationMenuIndex_, operationFinished);
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.10f, 0.05f, 1.0f));
 					ImGui::Text("Operation: %s", opTitle);
 					ImGui::Separator();
 					for (int i = 0; i < lineCount; ++i) {
-						if ((i + 1) == highlightedLine) {
+						if (std::find(highlightedLines.begin(), highlightedLines.end(), i + 1) != highlightedLines.end()) {
 							ImGui::TextColored(ImVec4(0.82f, 0.12f, 0.08f, 1.0f), "> %s", codeArray[i]);
 						}
 						else {
@@ -855,6 +919,16 @@ void HeapUI::drawSfml(sf::RenderWindow& window) {
 					state.activeIndex = state.cursorIndex;
 					state.secondaryIndex = -1;
 				}
+				break;
+			case HeapOp::HeapifyDownDone:
+				if (step.data >= 0 && step.data < static_cast<int>(state.heapValues.size())) {
+					state.cursorIndex = step.data;
+					state.activeIndex = state.cursorIndex;
+				}
+				state.secondaryIndex = -1;
+				break;
+			case HeapOp::ReturnHeap:
+				state.secondaryIndex = -1;
 				break;
 			case HeapOp::VisitStraight:
 				if (!state.heapValues.empty()) {
