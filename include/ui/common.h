@@ -18,6 +18,13 @@ struct GraphicsSettings {
 	int fpsLimit = 60;
 };
 
+struct AudioSettings {
+	bool musicEnabled = true;
+	float musicVolume = 40.0f;
+	bool sfxEnabled = true;
+	float sfxVolume = 70.0f;
+};
+
 // Định nghĩa các trạng thái màn hình của ứng dụng
 enum class UIState {
 	Menu,
@@ -33,6 +40,7 @@ struct UIConfig {
 	bool requestAppQuit = false;
 	bool requestGraphicsApply = false;
 	GraphicsSettings graphicsSettings;
+	AudioSettings audioSettings;
 	int monitorWidth = 1920;
 	int monitorHeight = 1080;
 };
