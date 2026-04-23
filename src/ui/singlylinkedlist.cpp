@@ -491,6 +491,7 @@ void SinglyLinkedListUI::draw() {
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 6; ++i) {
 					if (ImGui::Selectable(operationNames[i], operationMenuIndex_ == i, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(menuRowWidth, 0.0f))) {
+						audioManager.playClick();
 						operationMenuIndex_ = i;
 					}
 				}

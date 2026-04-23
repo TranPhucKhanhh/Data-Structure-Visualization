@@ -31,8 +31,8 @@ private:
 	bool initialized_ = false;
 	bool musicEnabled_ = true;
 	bool sfxEnabled_ = true;
-	float musicVolume_ = 40.0f;
-	float sfxVolume_ = 70.0f;
+	float musicVolume_ = 20.0f;
+	float sfxVolume_ = 90.0f;
 
 	bool musicLoaded_ = false;
 	bool clickLoaded_ = false;
