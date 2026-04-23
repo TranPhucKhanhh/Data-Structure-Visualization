@@ -2,6 +2,22 @@
 
 struct ImFont;
 
+enum class WindowMode {
+	Windowed,
+	Fullscreen,
+};
+
+struct GraphicsSettings {
+	WindowMode windowMode = WindowMode::Fullscreen;
+	int resolutionWidth = 1920;
+	int resolutionHeight = 1080;
+	bool fxaaEnabled = false;
+	bool antialiasingEnabled = true;
+	int antialiasingLevel = 8;
+	bool vsyncEnabled = true;
+	int fpsLimit = 60;
+};
+
 // Định nghĩa các trạng thái màn hình của ứng dụng
 enum class UIState {
 	Menu,
@@ -15,6 +31,10 @@ enum class UIState {
 struct UIConfig {
 	UIState state = UIState::Menu; // Mặc định khi mở app lên sẽ ở Menu
 	bool requestAppQuit = false;
+	bool requestGraphicsApply = false;
+	GraphicsSettings graphicsSettings;
+	int monitorWidth = 1920;
+	int monitorHeight = 1080;
 };
 
 // Biến toàn cục để các file khác đều có thể truy cập và thay đổi trạng thái

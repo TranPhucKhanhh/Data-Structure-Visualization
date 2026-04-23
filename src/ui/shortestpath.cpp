@@ -402,6 +402,8 @@ void ShortestPathUI::draw() {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	const ImVec2 vpPos = viewport->Pos;
 	const ImVec2 vpSize = viewport->Size;
+	const float layoutScale = std::max(0.70f, std::min(vpSize.x / 1920.0f, vpSize.y / 1080.0f));
+	const float controlScale = std::max(0.90f, layoutScale);
 	const float dt = ImGui::GetIO().DeltaTime;
 	const float foldLerp = 1.0f - std::exp(-14.0f * dt);
 	operationPanelOpenT_ = std::clamp(lerp(operationPanelOpenT_, operationPanelCollapsed_ ? 0.0f : 1.0f, foldLerp), 0.0f, 1.0f);
@@ -431,9 +433,9 @@ void ShortestPathUI::draw() {
 	ImGui::PopStyleColor();
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * layoutScale, 8.0f * layoutScale));
 	ImGui::SetNextWindowPos(vpPos, ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f * layoutScale), ImGuiCond_Always);
 	if (ImGui::Begin("##ShortestPathTopBar", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -445,7 +447,7 @@ void ShortestPathUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f, 26.0f))) {
+		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -455,7 +457,7 @@ void ShortestPathUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f, 26.0f))) {
+			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -484,27 +486,28 @@ void ShortestPathUI::draw() {
 		lastOperationMenuIndex_ = -1;
 	};
 
-	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
+	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f * layoutScale;
 	ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(52.0f, 200.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(52.0f * layoutScale, 200.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 	if (ImGui::Begin("Operation Toggle##SP", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings)) {
-		ImGui::SetCursorPosY(84.0f);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f, 32.0f))) {
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::SetCursorPosY(84.0f * layoutScale);
+		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	const float operationPanelWidth = 190.0f * operationPanelOpenT_;
+	const float operationPanelWidth = 190.0f * layoutScale * operationPanelOpenT_;
 	if (operationPanelWidth > 6.0f) {
-		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f, drawerBottomY), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f * layoutScale, drawerBottomY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f * layoutScale), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 		if (ImGui::Begin("Operations##SP", nullptr,
 			ImGuiWindowFlags_NoTitleBar |
@@ -512,6 +515,7 @@ void ShortestPathUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			if (menuCardTitleFont != nullptr) {
 				ImGui::PushFont(menuCardTitleFont);
 			}
@@ -519,7 +523,7 @@ void ShortestPathUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.12f, 0.42f, 0.20f, 0.98f));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 9.0f));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f * controlScale, 9.0f * controlScale));
 				const char* operationNames[] = { "Graph", "Run", "Customize" };
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 3; ++i) {
@@ -537,9 +541,9 @@ void ShortestPathUI::draw() {
 		ImGui::End();
 		ImGui::PopStyleColor();
 
-		const float inputPanelWidth = 700.0f * operationPanelOpenT_;
-		const float inputPanelHeight = 200.0f;
-		const float inputPanelX = vpPos.x + 52.0f + operationPanelWidth + 2.0f;
+		const float inputPanelWidth = 700.0f * layoutScale * operationPanelOpenT_;
+		const float inputPanelHeight = 200.0f * layoutScale;
+		const float inputPanelX = vpPos.x + 52.0f * layoutScale + operationPanelWidth + 2.0f * layoutScale;
 		ImGui::SetNextWindowPos(ImVec2(inputPanelX, drawerBottomY), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(inputPanelWidth, inputPanelHeight), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
@@ -549,6 +553,7 @@ void ShortestPathUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			if (menuCardDescFont != nullptr) {
 				ImGui::PushFont(menuCardDescFont);
 			}
@@ -557,7 +562,7 @@ void ShortestPathUI::draw() {
 				ImGui::TextUnformatted("Graph Input");
 				ImGui::TextWrapped("Enter each edge as three numbers: u v w. Example: 0 1 4");
 				ImGui::InputTextMultiline("##SPEdgeInput", edgeInput_.data(), edgeInput_.size(), ImVec2(-1.0f, 108.0f));
-				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f, 0.0f))) {
+				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f * controlScale, 0.0f))) {
 					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
 					edgeCount_ = static_cast<int>(graphEdges_.size());
 
@@ -577,7 +582,7 @@ void ShortestPathUI::draw() {
 
 
                 //Update the File Browser button for Shortest Path
-				if (ImGui::Button("Browse File", ImVec2(120.0f, 0.0f)))
+				if (ImGui::Button("Browse File", ImVec2(120.0f * controlScale, 0.0f)))
                 {
                     std::string selected_path = cr::utils::SimpleFileDialog::dialog();
                     if (!selected_path.empty())
@@ -586,7 +591,7 @@ void ShortestPathUI::draw() {
                     }
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Load from File", ImVec2(120.0f, 0.0f)))
+				if (ImGui::Button("Load from File", ImVec2(120.0f * controlScale, 0.0f)))
                 {
 //                    std::cerr << "0\n";
                     statusMessage_ = shortestPath.initFromFile(txtPath_.data());
@@ -620,7 +625,7 @@ void ShortestPathUI::draw() {
                 ImGui::SameLine();
                 ImGui::Text("Path: %s", txtPath_.data());
 
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
                 ImGui::InputInt("Start node", &startNode_);
 				ImGui::SameLine();
 				ImGui::InputInt("End node", &endNode_);
@@ -629,7 +634,7 @@ void ShortestPathUI::draw() {
 			else if (operationMenuIndex_ == 1) {
 				ImGui::TextUnformatted("Build / Run");
 				ImGui::TextWrapped("Use the current input to build the graph or run Dijkstra with timeline animation.");
-				if (ImGui::Button("Use sample graph", ImVec2(170.0f, 0.0f))) {
+				if (ImGui::Button("Use sample graph", ImVec2(170.0f * controlScale, 0.0f))) {
 					const char* sampleGraph =
                         "5 6\n"
 						"0 1 4\n"
@@ -651,7 +656,7 @@ void ShortestPathUI::draw() {
 					resetTimeline();
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Build graph", ImVec2(120.0f, 0.0f))) {
+				if (ImGui::Button("Build graph", ImVec2(120.0f * controlScale, 0.0f))) {
                     resetTimeline();
 					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
 
@@ -673,7 +678,7 @@ void ShortestPathUI::draw() {
                     }
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Run Dijkstra", ImVec2(120.0f, 0.0f))) {
+				if (ImGui::Button("Run Dijkstra", ImVec2(120.0f * controlScale, 0.0f))) {
 //					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
 //					edgeCount_ = static_cast<int>(graphEdges_.size());
 //					graphLoaded_ = edgeCount_ > 0;
@@ -734,7 +739,7 @@ void ShortestPathUI::draw() {
 					}
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Clear graph", ImVec2(120.0f, 0.0f))) {
+				if (ImGui::Button("Clear graph", ImVec2(120.0f * controlScale, 0.0f))) {
 					edgeInput_[0] = '\0';
 					graphEdges_.clear();
 					pathNodes_.clear();
@@ -779,12 +784,12 @@ void ShortestPathUI::draw() {
 	const std::string currentComment = instructionToComment(displayInstruction, statusMessage_);
 	const std::string distanceArrayText = formatDistanceArray(panelState);
 
-	const float commentY = vpPos.y + vpSize.y - 450.0f;
-	const float commentH = 115.0f;
-	const float codeY = vpPos.y + vpSize.y - 300.0f;
-	const float codeH = 170.0f;
-	const float rightTabWidth = 26.0f;
-	const float rightPanelWidth = 480.0f;
+	const float commentY = vpPos.y + vpSize.y - 450.0f * layoutScale;
+	const float commentH = 115.0f * layoutScale;
+	const float codeY = vpPos.y + vpSize.y - 300.0f * layoutScale;
+	const float codeH = 170.0f * layoutScale;
+	const float rightTabWidth = 26.0f * layoutScale;
+	const float rightPanelWidth = 480.0f * layoutScale;
 	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
 	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -822,8 +827,8 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -876,16 +881,16 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f * layoutScale), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, 0.98f));
 	if (ImGui::Begin("Playback##SPBottom", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
@@ -893,7 +898,8 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::PushItemWidth(140.0f);
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::PushItemWidth(140.0f * controlScale);
 		ImGui::SliderFloat("##SPBottomPlaybackSpeed", &playbackSpeed_, 0.25f, 5.0f, "");
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
@@ -937,8 +943,9 @@ void ShortestPathUI::draw() {
 		if (!currentSteps_.empty()) {
 			int frameIndex = displayStep;
 			const int maxFrame = static_cast<int>(currentSteps_.size());
+			const float timelineWidth = std::max(220.0f * layoutScale, vpSize.x * 0.30f * layoutScale);
 			ImGui::SameLine(vpSize.x * 0.58f);
-			ImGui::PushItemWidth(vpSize.x * 0.36f);
+			ImGui::PushItemWidth(timelineWidth);
 			if (ImGui::SliderInt("##SPBottomTimeline", &frameIndex, 0, maxFrame, "")) {
 				autoplay_ = false;
 				startStepTransition(std::clamp(frameIndex, 0, maxFrame));

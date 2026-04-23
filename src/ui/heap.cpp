@@ -276,6 +276,8 @@ void HeapUI::draw() {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	const ImVec2 vpPos = viewport->Pos;
 	const ImVec2 vpSize = viewport->Size;
+	const float layoutScale = std::max(0.70f, std::min(vpSize.x / 1920.0f, vpSize.y / 1080.0f));
+	const float controlScale = std::max(0.90f, layoutScale);
 	const float dt = ImGui::GetIO().DeltaTime;
 	const float foldLerp = 1.0f - std::exp(-14.0f * dt);
 
@@ -284,9 +286,9 @@ void HeapUI::draw() {
 	codePanelOpenT_ = std::clamp(lerp(codePanelOpenT_, codePanelCollapsed_ ? 0.0f : 1.0f, foldLerp), 0.0f, 1.0f);
 
 	ImGui::SetNextWindowPos(vpPos);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f));
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f * layoutScale));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * layoutScale, 8.0f * layoutScale));
 	if (ImGui::Begin("##HeapTopBar", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -298,7 +300,7 @@ void HeapUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f, 26.0f))) {
+		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -308,7 +310,7 @@ void HeapUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f, 26.0f))) {
+			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -334,27 +336,28 @@ void HeapUI::draw() {
 		startTimeline({}, heap.getData(), operationMenuIndex_, heap.getType() == HeapType::MinHeap ? "Switched to Min Heap" : "Switched to Max Heap");
 	};
 
-	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
+	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f * layoutScale;
 	ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(52.0f, 200.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(52.0f * layoutScale, 200.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 	if (ImGui::Begin("Operation Toggle##Heap", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings)) {
-		ImGui::SetCursorPosY(84.0f);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f, 32.0f))) {
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::SetCursorPosY(84.0f * layoutScale);
+		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	const float operationPanelWidth = 190.0f * operationPanelOpenT_;
+	const float operationPanelWidth = 190.0f * layoutScale * operationPanelOpenT_;
 	if (operationPanelWidth > 6.0f) {
-		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f, drawerBottomY), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f * layoutScale, drawerBottomY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f * layoutScale), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 		if (ImGui::Begin("Operations##HeapOperations", nullptr,
 			ImGuiWindowFlags_NoTitleBar |
@@ -362,11 +365,12 @@ void HeapUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			if (operationPanelOpenT_ > 0.6f) {
 				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.12f, 0.42f, 0.20f, 0.98f));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 9.0f));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f * controlScale, 9.0f * controlScale));
 				const char* operationNames[] = { "Create(A)", "Search", "Insert", "Remove", "Update", "Customize" };
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 6; ++i) {
@@ -381,9 +385,9 @@ void HeapUI::draw() {
 		ImGui::End();
 		ImGui::PopStyleColor();
 
-		const float inputPanelWidth = 700.0f * operationPanelOpenT_;
-		const float inputPanelHeight = 200.0f;
-		const float inputPanelX = vpPos.x + 52.0f + operationPanelWidth + 2.0f;
+		const float inputPanelWidth = 700.0f * layoutScale * operationPanelOpenT_;
+		const float inputPanelHeight = 200.0f * layoutScale;
+		const float inputPanelX = vpPos.x + 52.0f * layoutScale + operationPanelWidth + 2.0f * layoutScale;
 		ImGui::SetNextWindowPos(ImVec2(inputPanelX, drawerBottomY), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(inputPanelWidth, inputPanelHeight), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
@@ -393,25 +397,26 @@ void HeapUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
 				ImGui::Text("Heap Type: %s", heap.getType() == HeapType::MinHeap ? "MinHeap" : "MaxHeap");
 				ImGui::SameLine();
-				if (ImGui::Button("Swap Type", ImVec2(100.0f, 0.0f))) {
+				if (ImGui::Button("Swap Type", ImVec2(100.0f * controlScale, 0.0f))) {
 					switchHeapType();
 				}
 
-				if (ImGui::Button("Empty", ImVec2(56.0f, 0.0f))) {
+				if (ImGui::Button("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
 					heap.clear();
 					startTimeline({}, {}, 0, "Initialized empty heap");
 				}
 				ImGui::SameLine();
 				ImGui::TextUnformatted("N =");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(110.0f);
+				ImGui::PushItemWidth(110.0f * controlScale);
 				ImGui::InputInt("##HeapCreateCount", &randomCount_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Random", ImVec2(78.0f, 0.0f))) {
+				if (ImGui::Button("Random", ImVec2(78.0f * controlScale, 0.0f))) {
 
 					std::vector<HeapInstruction> steps = heap.initRandomStep(randomCount_);
 					startTimeline(std::move(steps), heap.getData(), 0, "Initialized random heap");
@@ -420,11 +425,11 @@ void HeapUI::draw() {
 				ImGui::Separator();
 				ImGui::TextUnformatted("A =");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(260.0f);
+				ImGui::PushItemWidth(260.0f * controlScale);
 				ImGui::InputText("##HeapCreateValues", createValues_.data(), createValues_.size());
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Go", ImVec2(56.0f, 0.0f))) {
+				if (ImGui::Button("Go", ImVec2(56.0f * controlScale, 0.0f))) {
 					const std::vector<int> values = heap.parseIntegers(createValues_.data());
 					if (values.empty()) {
 						operationResult_ = "Create failed: enter comma-separated integers";
@@ -436,9 +441,9 @@ void HeapUI::draw() {
 					}
 				}
 
-				const float browseButtonW = 110.0f;
-				const float loadButtonW = 92.0f;
-				const float pathInputW = 320.0f;
+				const float browseButtonW = 110.0f * controlScale;
+				const float loadButtonW = 92.0f * controlScale;
+				const float pathInputW = 320.0f * controlScale;
 
 				ImGui::PushItemWidth(pathInputW);
 				ImGui::InputText(".txt path", txtPath_.data(), txtPath_.size());
@@ -467,11 +472,11 @@ void HeapUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
 				ImGui::InputInt("##HeapSearchValue", &searchValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Search", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Search", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.searchValueStep(searchValue_);
 					const bool found = !steps.empty() && steps.back().heap_op == HeapOp::FoundValue;
@@ -481,18 +486,18 @@ void HeapUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
 				ImGui::InputInt("##HeapInsertValue", &insertValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Insert", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.insertValueStep(insertValue_);
 					startTimeline(std::move(steps), base, 2, "Inserted value");
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
-				if (ImGui::Button("Remove Top", ImVec2(110.0f, 0.0f))) {
+				if (ImGui::Button("Remove Top", ImVec2(110.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.deleteTopStep();
 					startTimeline(std::move(steps), base, 3, "Removed top node");
@@ -501,17 +506,17 @@ void HeapUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
 				ImGui::TextUnformatted("Old:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
 				ImGui::InputInt("##HeapUpdateOld", &updateOldValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				ImGui::TextUnformatted("New:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
 				ImGui::InputInt("##HeapUpdateNew", &updateNewValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Update", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Update", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.updateValueStep(updateOldValue_, updateNewValue_);
 					startTimeline(std::move(steps), base, 4, "Update operation");
@@ -520,17 +525,17 @@ void HeapUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
 				ImGui::Text("Heap Type: %s", heap.getType() == HeapType::MinHeap ? "MinHeap" : "MaxHeap");
 				ImGui::SameLine();
-				if (ImGui::Button("Swap Type##Customize", ImVec2(110.0f, 0.0f))) {
+				if (ImGui::Button("Swap Type##Customize", ImVec2(110.0f * controlScale, 0.0f))) {
 					switchHeapType();
 				}
 
-				ImGui::PushItemWidth(230.0f);
+				ImGui::PushItemWidth(230.0f * controlScale);
 				ImGui::SliderFloat("Node Radius", &nodeRadius_, 12.0f, 44.0f, "%.1f");
 				ImGui::SliderFloat("Edge Thickness", &edgeThickness_, 1.0f, 6.0f, "%.1f");
 				ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
 				ImGui::PopItemWidth();
 				ImGui::Checkbox("Code Overlay", &showCodeOverlay_);
-				if (ImGui::Button("Reset Visuals", ImVec2(124.0f, 0.0f))) {
+				if (ImGui::Button("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
 					nodeRadius_ = 28.0f;
 					edgeThickness_ = 3.0f;
 					fontScale_ = 1.0f;
@@ -567,12 +572,12 @@ void HeapUI::draw() {
 		? instructionToComment(activeInstruction)
 		: (operationResult_.empty() ? "Ready" : operationResult_);
 
-	const float rightTabWidth = 26.0f;
-	const float rightPanelWidth = 480.0f;
-	const float commentY = vpPos.y + vpSize.y - 450.0f;
-	const float commentH = 115.0f;
-	const float codeY = vpPos.y + vpSize.y - 300.0f;
-	const float codeH = 170.0f;
+	const float rightTabWidth = 26.0f * layoutScale;
+	const float rightPanelWidth = 480.0f * layoutScale;
+	const float commentY = vpPos.y + vpSize.y - 450.0f * layoutScale;
+	const float commentH = 115.0f * layoutScale;
+	const float codeY = vpPos.y + vpSize.y - 300.0f * layoutScale;
+	const float codeH = 170.0f * layoutScale;
 	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
 	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -606,8 +611,8 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -662,16 +667,16 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f * layoutScale), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, 0.98f));
 	if (ImGui::Begin("Playback##HeapBottomPlayback", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
@@ -679,7 +684,8 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::PushItemWidth(140.0f);
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::PushItemWidth(140.0f * controlScale);
 		ImGui::SliderFloat("##HeapBottomPlaybackSpeed", &playbackSpeed_, 0.25f, 5.0f, "");
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
@@ -723,8 +729,9 @@ void HeapUI::draw() {
 		if (!currentSteps_.empty()) {
 			int frameIndex = currentStepIndex_;
 			const int maxFrame = static_cast<int>(currentSteps_.size());
+			const float timelineWidth = std::max(220.0f * layoutScale, vpSize.x * 0.30f * layoutScale);
 			ImGui::SameLine(vpSize.x * 0.58f);
-			ImGui::PushItemWidth(vpSize.x * 0.36f);
+			ImGui::PushItemWidth(timelineWidth);
 			if (ImGui::SliderInt("##HeapBottomTimeline", &frameIndex, 0, maxFrame, "")) {
 				autoplay_ = false;
 				startStepTransition(std::clamp(frameIndex, 0, maxFrame));

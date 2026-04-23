@@ -2,6 +2,7 @@
 #include "ui/common.h"
 
 #include <algorithm>
+#include <array>
 #include <cfloat>
 #include <cmath>
 
@@ -255,6 +256,155 @@ void MenuUI::draw() {
 	drawCard("card_sp", "Shortest Path on Graph", "Weighted graph path exploration", UIState::ShortestPath, IM_COL32(220, 83, 68, 255), 3, ImVec2(startX + cardWidth + gap, startY + cardHeight + gap));
 
 	const ImVec2 quitSize(180.0f * uiScale, 44.0f * uiScale);
+
+	struct ResolutionOption {
+		int width;
+		int height;
+		const char* label;
+	};
+	static constexpr std::array<ResolutionOption, 7> kResolutionOptions{ {
+		{1280, 720, "1280 x 720"},
+		{1366, 768, "1366 x 768"},
+		{1600, 900, "1600 x 900"},
+		{1920, 1080, "1920 x 1080"},
+		{2560, 1440, "2560 x 1440"},
+		{3200, 1800, "3200 x 1800"},
+		{3840, 2160, "3840 x 2160"},
+	} };
+
+	static GraphicsSettings draftSettings = uiConfig.graphicsSettings;
+	if (ImGui::IsPopupOpen("Graphics Settings##MainMenu") == false) {
+		draftSettings = uiConfig.graphicsSettings;
+	}
+
+	const ImVec2 settingsSize(180.0f * uiScale, 44.0f * uiScale);
+	ImGui::SetCursorScreenPos(ImVec2(
+		origin.x + (vpSize.x - settingsSize.x) * 0.5f,
+		origin.y + vpSize.y - quitSize.y - settingsSize.y - 34.0f * uiScale
+	));
+	ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(45, 128, 179, 255));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(58, 146, 199, 255));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(32, 102, 144, 255));
+	if (ImGui::Button("SETTINGS", settingsSize)) {
+		draftSettings = uiConfig.graphicsSettings;
+		ImGui::OpenPopup("Graphics Settings##MainMenu");
+	}
+	ImGui::PopStyleColor(3);
+
+	ImGui::SetNextWindowPos(ImVec2(origin.x + vpSize.x * 0.5f, origin.y + vpSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(std::max(460.0f, vpSize.x * 0.34f), 0.0f), ImGuiCond_Appearing);
+	if (ImGui::BeginPopupModal("Graphics Settings##MainMenu", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		int windowModeIndex = (draftSettings.windowMode == WindowMode::Fullscreen) ? 1 : 0;
+		const char* windowModes[] = { "Windowed", "Fullscreen" };
+		if (ImGui::Combo("Display Mode", &windowModeIndex, windowModes, IM_ARRAYSIZE(windowModes))) {
+			draftSettings.windowMode = (windowModeIndex == 1) ? WindowMode::Fullscreen : WindowMode::Windowed;
+		}
+
+		int selectedResolution = -1;
+		for (int i = 0; i < static_cast<int>(kResolutionOptions.size()); ++i) {
+			if (draftSettings.resolutionWidth == kResolutionOptions[static_cast<std::size_t>(i)].width &&
+				draftSettings.resolutionHeight == kResolutionOptions[static_cast<std::size_t>(i)].height) {
+				selectedResolution = i;
+				break;
+			}
+		}
+		if (selectedResolution < 0) {
+			selectedResolution = 3;
+		}
+
+		const int monitorW = std::max(800, uiConfig.monitorWidth);
+		const int monitorH = std::max(600, uiConfig.monitorHeight);
+		if (draftSettings.resolutionWidth > monitorW || draftSettings.resolutionHeight > monitorH) {
+			draftSettings.resolutionWidth = monitorW;
+			draftSettings.resolutionHeight = monitorH;
+			selectedResolution = -1;
+			for (int i = 0; i < static_cast<int>(kResolutionOptions.size()); ++i) {
+				if (draftSettings.resolutionWidth == kResolutionOptions[static_cast<std::size_t>(i)].width &&
+					draftSettings.resolutionHeight == kResolutionOptions[static_cast<std::size_t>(i)].height) {
+					selectedResolution = i;
+					break;
+				}
+			}
+		}
+
+		const char* resolutionPreviewLabel = "Monitor max";
+		if (selectedResolution >= 0) {
+			resolutionPreviewLabel = kResolutionOptions[static_cast<std::size_t>(selectedResolution)].label;
+		}
+
+		if (ImGui::BeginCombo("Resolution", resolutionPreviewLabel)) {
+			for (int i = 0; i < static_cast<int>(kResolutionOptions.size()); ++i) {
+				const ResolutionOption& option = kResolutionOptions[static_cast<std::size_t>(i)];
+				if (option.width > monitorW || option.height > monitorH) {
+					continue;
+				}
+				const bool isSelected = (i == selectedResolution);
+				if (ImGui::Selectable(option.label, isSelected)) {
+					draftSettings.resolutionWidth = option.width;
+					draftSettings.resolutionHeight = option.height;
+					selectedResolution = i;
+				}
+				if (isSelected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		ImGui::Separator();
+		ImGui::Checkbox("VSync", &draftSettings.vsyncEnabled);
+		ImGui::Checkbox("FXAA", &draftSettings.fxaaEnabled);
+		if (draftSettings.fxaaEnabled) {
+			ImGui::TextColored(ImVec4(0.52f, 0.56f, 0.62f, 1.0f), "FXAA is currently reserved for post-process integration.");
+		}
+
+		static constexpr int kAaLevels[] = { 0, 2, 4, 8, 16 };
+		static constexpr const char* kAaLabels[] = { "None", "2x", "4x", "8x", "16x" };
+		int aaIndex = 0;
+		for (int i = 0; i < IM_ARRAYSIZE(kAaLevels); ++i) {
+			if (draftSettings.antialiasingEnabled && draftSettings.antialiasingLevel == kAaLevels[i]) {
+				aaIndex = i;
+				break;
+			}
+		}
+		if (!draftSettings.antialiasingEnabled) {
+			aaIndex = 0;
+		}
+		if (ImGui::Combo("AA Level", &aaIndex, kAaLabels, IM_ARRAYSIZE(kAaLabels))) {
+			draftSettings.antialiasingLevel = kAaLevels[aaIndex];
+			draftSettings.antialiasingEnabled = (kAaLevels[aaIndex] > 0);
+		}
+
+		static constexpr int kFpsOptions[] = { 24, 30, 60, 120, 144, 240 };
+		static constexpr const char* kFpsLabels[] = { "24", "30", "60", "120", "144", "240" };
+		int fpsIndex = 2;
+		for (int i = 0; i < IM_ARRAYSIZE(kFpsOptions); ++i) {
+			if (draftSettings.fpsLimit == kFpsOptions[i]) {
+				fpsIndex = i;
+				break;
+			}
+		}
+		if (ImGui::Combo("FPS Limit", &fpsIndex, kFpsLabels, IM_ARRAYSIZE(kFpsLabels))) {
+			draftSettings.fpsLimit = kFpsOptions[fpsIndex];
+		}
+
+		ImGui::Spacing();
+		if (ImGui::Button("Apply", ImVec2(120.0f, 0.0f))) {
+			draftSettings.antialiasingLevel = std::clamp(draftSettings.antialiasingLevel, 0, 16);
+			draftSettings.antialiasingEnabled = draftSettings.antialiasingLevel > 0;
+			draftSettings.fpsLimit = std::max(24, draftSettings.fpsLimit);
+			uiConfig.graphicsSettings = draftSettings;
+			uiConfig.requestGraphicsApply = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) {
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+
 	ImGui::SetCursorScreenPos(ImVec2(
 		origin.x + (vpSize.x - quitSize.x) * 0.5f,
 		origin.y + vpSize.y - quitSize.y - 26.0f * uiScale

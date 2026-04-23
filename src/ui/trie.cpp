@@ -313,6 +313,8 @@ void TrieUI::draw() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const ImVec2 vpPos = viewport->Pos;
     const ImVec2 vpSize = viewport->Size;
+    const float layoutScale = std::max(0.70f, std::min(vpSize.x / 1920.0f, vpSize.y / 1080.0f));
+    const float controlScale = std::max(0.90f, layoutScale);
     const float dt = ImGui::GetIO().DeltaTime;
     const float foldLerp = 1.0f - std::exp(-14.0f * dt);
 
@@ -321,9 +323,9 @@ void TrieUI::draw() {
     codePanelOpenT_ = std::clamp(lerp(codePanelOpenT_, codePanelCollapsed_ ? 0.0f : 1.0f, foldLerp), 0.0f, 1.0f);
 
     ImGui::SetNextWindowPos(vpPos);
-    ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f));
+    ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f * layoutScale));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * layoutScale, 8.0f * layoutScale));
     if (ImGui::Begin("##TrieTopBar", nullptr,
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoResize |
@@ -335,7 +337,7 @@ void TrieUI::draw() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-        if (ImGui::Button("MAIN MENU", ImVec2(112.0f, 26.0f))) {
+        if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
             uiConfig.state = UIState::Menu;
         }
 
@@ -345,7 +347,7 @@ void TrieUI::draw() {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
             }
-            if (ImGui::Button(label, ImVec2(132.0f, 26.0f))) {
+            if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
                 uiConfig.state = target;
             }
             if (active) {
@@ -390,27 +392,28 @@ void TrieUI::draw() {
         hasAnimationBase_ = true;
     };
 
-    const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
+    const float drawerBottomY = vpPos.y + vpSize.y - 300.0f * layoutScale;
     ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(52.0f, 200.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(52.0f * layoutScale, 200.0f * layoutScale), ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
     if (ImGui::Begin("Operation Toggle##Trie", nullptr,
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings)) {
-        ImGui::SetCursorPosY(84.0f);
-        if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f, 32.0f))) {
+        ImGui::SetWindowFontScale(controlScale);
+        ImGui::SetCursorPosY(84.0f * layoutScale);
+        if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
             operationPanelCollapsed_ = !operationPanelCollapsed_;
         }
     }
     ImGui::End();
     ImGui::PopStyleColor();
 
-    const float operationPanelWidth = 190.0f * operationPanelOpenT_;
+    const float operationPanelWidth = 190.0f * layoutScale * operationPanelOpenT_;
     if (operationPanelWidth > 6.0f) {
-        ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f, drawerBottomY), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f * layoutScale, drawerBottomY), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f * layoutScale), ImGuiCond_Always);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
         if (ImGui::Begin("Operations##TrieOperations", nullptr,
             ImGuiWindowFlags_NoTitleBar |
@@ -418,6 +421,7 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::SetWindowFontScale(controlScale);
             const bool usingMenuListFont = (menuCardTitleFont != nullptr);
             if (usingMenuListFont) {
                 ImGui::PushFont(menuCardTitleFont);
@@ -426,7 +430,7 @@ void TrieUI::draw() {
                 ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
                 ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.12f, 0.42f, 0.20f, 0.98f));
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 9.0f));
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f * controlScale, 9.0f * controlScale));
 
                 const char* operationNames[] = { "Create(A)", "Search", "Insert", "Remove", "Update", "Customize" };
                 const float menuRowWidth = ImGui::GetContentRegionAvail().x;
@@ -446,9 +450,9 @@ void TrieUI::draw() {
         ImGui::End();
         ImGui::PopStyleColor();
 
-        const float inputPanelWidth = 700.0f * operationPanelOpenT_;
-        const float inputPanelHeight = 200.0f;
-        const float inputPanelX = vpPos.x + 52.0f + operationPanelWidth + 2.0f;
+        const float inputPanelWidth = 700.0f * layoutScale * operationPanelOpenT_;
+        const float inputPanelHeight = 200.0f * layoutScale;
+        const float inputPanelX = vpPos.x + 52.0f * layoutScale + operationPanelWidth + 2.0f * layoutScale;
         ImGui::SetNextWindowPos(ImVec2(inputPanelX, drawerBottomY), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(inputPanelWidth, inputPanelHeight), ImGuiCond_Always);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
@@ -458,6 +462,7 @@ void TrieUI::draw() {
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::SetWindowFontScale(controlScale);
             const bool usingMenuInputFont = (menuCardDescFont != nullptr);
             if (usingMenuInputFont) {
                 ImGui::PushFont(menuCardDescFont);
@@ -469,13 +474,13 @@ void TrieUI::draw() {
 
                 ImGui::TextUnformatted("Initialize Trie");
 
-                if (ImGui::Button("Empty", ImVec2(90.0f, 0.0f))) {
+                if (ImGui::Button("Empty", ImVec2(90.0f * controlScale, 0.0f))) {
                     captureEmptyAnimationBase();
                     trie.clear();
                     startTimeline({}, 0, "Initialized empty trie");
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Random", ImVec2(90.0f, 0.0f))) {
+                if (ImGui::Button("Random", ImVec2(90.0f * controlScale, 0.0f))) {
                     std::vector<std::string> words = trie.generateRandomWords(randomWordCount_, randomMinLength_, randomMaxLength_);
                     if (words.empty()) {
                         operationResult_ = "Random initialize failed";
@@ -492,26 +497,26 @@ void TrieUI::draw() {
 
                 ImGui::TextUnformatted("N =");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(90.0f);
+                ImGui::PushItemWidth(90.0f * controlScale);
                 ImGui::InputInt("##TrieRandomCount", &randomWordCount_);
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 ImGui::TextUnformatted("Min Len =");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(90.0f);
+                ImGui::PushItemWidth(90.0f * controlScale);
                 ImGui::InputInt("##TrieRandomMinLen", &randomMinLength_);
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 ImGui::TextUnformatted("Max Len =");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(90.0f);
+                ImGui::PushItemWidth(90.0f * controlScale);
                 ImGui::InputInt("##TrieRandomMaxLen", &randomMaxLength_);
                 ImGui::PopItemWidth();
 
                 ImGui::Spacing();
                 ImGui::TextUnformatted("Custom words (comma-separated)");
-                const float createRowButtonW = 72.0f;
-                const float createRowInputW = std::max(180.0f, ImGui::GetContentRegionAvail().x - createRowButtonW - 8.0f);
+                const float createRowButtonW = 72.0f * controlScale;
+                const float createRowInputW = std::max(180.0f * controlScale, ImGui::GetContentRegionAvail().x - createRowButtonW - 8.0f * controlScale);
                 ImGui::PushItemWidth(createRowInputW);
                 ImGui::InputText("##TrieCreateWords", createWords_.data(), createWords_.size());
                 ImGui::PopItemWidth();
@@ -531,11 +536,11 @@ void TrieUI::draw() {
                 ImGui::Spacing();
                 ImGui::TextUnformatted("Load from .txt");
 
-                const float browseButtonW = 110.0f;
-                const float loadButtonW = 100.0f;
-                const float spacingW = 16.0f;
+                const float browseButtonW = 110.0f * controlScale;
+                const float loadButtonW = 100.0f * controlScale;
+                const float spacingW = 16.0f * controlScale;
                 const float loadInputW = std::max(
-                    180.0f,
+                    180.0f * controlScale,
                     ImGui::GetContentRegionAvail().x - browseButtonW - loadButtonW - spacingW
                 );
 
@@ -574,11 +579,11 @@ void TrieUI::draw() {
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
                 ImGui::TextUnformatted("Word:");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(180.0f);
+                ImGui::PushItemWidth(180.0f * controlScale);
                 ImGui::InputText("##TrieSearchWord", searchWord_.data(), searchWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Search", ImVec2(95.0f, 0.0f))) {
+                if (ImGui::Button("Search", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(searchWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Search failed: enter a valid word";
@@ -594,11 +599,11 @@ void TrieUI::draw() {
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
                 ImGui::TextUnformatted("Word:");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(180.0f);
+                ImGui::PushItemWidth(180.0f * controlScale);
                 ImGui::InputText("##TrieInsertWord", insertWord_.data(), insertWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Insert", ImVec2(95.0f, 0.0f))) {
+                if (ImGui::Button("Insert", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(insertWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Insert failed: enter a valid word";
@@ -613,11 +618,11 @@ void TrieUI::draw() {
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
                 ImGui::TextUnformatted("Word:");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(180.0f);
+                ImGui::PushItemWidth(180.0f * controlScale);
                 ImGui::InputText("##TrieDeleteWord", deleteWord_.data(), deleteWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Remove", ImVec2(95.0f, 0.0f))) {
+                if (ImGui::Button("Remove", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(deleteWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Remove failed: enter a valid word";
@@ -632,17 +637,17 @@ void TrieUI::draw() {
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
                 ImGui::TextUnformatted("Old:");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(140.0f);
+                ImGui::PushItemWidth(140.0f * controlScale);
                 ImGui::InputText("##TrieUpdateOld", updateOldWord_.data(), updateOldWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 ImGui::TextUnformatted("New:");
                 ImGui::SameLine();
-                ImGui::PushItemWidth(140.0f);
+                ImGui::PushItemWidth(140.0f * controlScale);
                 ImGui::InputText("##TrieUpdateNew", updateNewWord_.data(), updateNewWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Update", ImVec2(95.0f, 0.0f))) {
+                if (ImGui::Button("Update", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string oldWord = trie.sanitizeWord(updateOldWord_.data());
                     const std::string newWord = trie.sanitizeWord(updateNewWord_.data());
                     if (oldWord.empty() || newWord.empty()) {
@@ -656,13 +661,13 @@ void TrieUI::draw() {
                 }
             }
             else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
-                ImGui::PushItemWidth(220.0f);
+                ImGui::PushItemWidth(220.0f * controlScale);
                 ImGui::SliderFloat("Node Radius", &nodeRadius_, 12.0f, 44.0f, "%.1f");
                 ImGui::SliderFloat("Edge Thickness", &edgeThickness_, 1.0f, 6.0f, "%.1f");
                 ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
                 ImGui::PopItemWidth();
                 ImGui::Checkbox("Code Overlay", &showCodeOverlay_);
-                if (ImGui::Button("Reset Visuals", ImVec2(124.0f, 0.0f))) {
+                if (ImGui::Button("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
                     nodeRadius_ = 28.0f;
                     edgeThickness_ = 3.0f;
                     fontScale_ = 1.0f;
@@ -702,12 +707,12 @@ void TrieUI::draw() {
         ? instructionToComment(activeInstruction)
         : (operationResult_.empty() ? "Ready" : operationResult_);
 
-    const float rightTabWidth = 26.0f;
-    const float rightPanelWidth = 550.0f;
-    const float commentY = vpPos.y + vpSize.y - 450.0f;
-    const float commentH = 115.0f;
-    const float codeY = vpPos.y + vpSize.y - 330.0f;
-    const float codeH = 270.0f;
+    const float rightTabWidth = 26.0f * layoutScale;
+    const float rightPanelWidth = 550.0f * layoutScale;
+    const float commentY = vpPos.y + vpSize.y - 450.0f * layoutScale;
+    const float commentH = 115.0f * layoutScale;
+    const float codeY = vpPos.y + vpSize.y - 330.0f * layoutScale;
+    const float codeH = 270.0f * layoutScale;
     const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
     const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -748,8 +753,8 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoScrollbar)) {
-        ImGui::SetCursorPosY(commentH * 0.5f - 12.0f);
-        if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+        ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
+        if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
             commentPanelCollapsed_ = !commentPanelCollapsed_;
         }
     }
@@ -805,16 +810,16 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoScrollbar)) {
-        ImGui::SetCursorPosY(codeH * 0.5f - 12.0f);
-        if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+        ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
+        if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
             codePanelCollapsed_ = !codePanelCollapsed_;
         }
     }
     ImGui::End();
     ImGui::PopStyleColor();
 
-    ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f * layoutScale), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f * layoutScale), ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, 0.98f));
     if (ImGui::Begin("Playback##TrieBottomPlayback", nullptr,
         ImGuiWindowFlags_NoTitleBar |
@@ -822,7 +827,8 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoScrollbar)) {
-        ImGui::PushItemWidth(140.0f);
+        ImGui::SetWindowFontScale(controlScale);
+        ImGui::PushItemWidth(140.0f * controlScale);
         ImGui::SliderFloat("##TrieBottomPlaybackSpeed", &playbackSpeed_, 0.25f, 5.0f, "");
         ImGui::PopItemWidth();
         ImGui::SameLine();
@@ -866,8 +872,9 @@ void TrieUI::draw() {
         if (!currentSteps_.empty()) {
             int frameIndex = currentStepIndex_;
             const int maxFrame = static_cast<int>(currentSteps_.size());
+            const float timelineWidth = std::max(220.0f * layoutScale, vpSize.x * 0.30f * layoutScale);
             ImGui::SameLine(vpSize.x * 0.58f);
-            ImGui::PushItemWidth(vpSize.x * 0.36f);
+            ImGui::PushItemWidth(timelineWidth);
             if (ImGui::SliderInt("##TrieBottomTimeline", &frameIndex, 0, maxFrame, "")) {
                 autoplay_ = false;
                 startStepTransition(std::clamp(frameIndex, 0, maxFrame));

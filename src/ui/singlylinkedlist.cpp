@@ -268,8 +268,9 @@ namespace {
 	{
 		const ImVec2 viewportPos = ImGui::GetMainViewport()->Pos;
 		const ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
-		ImGui::SetNextWindowPos(ImVec2(viewportPos.x + viewportSize.x - 430.0f, viewportPos.y + 20.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(410.0f, 250.0f), ImGuiCond_FirstUseEver);
+		const float overlayScale = std::max(0.70f, std::min(viewportSize.x / 1920.0f, viewportSize.y / 1080.0f));
+		ImGui::SetNextWindowPos(ImVec2(viewportPos.x + viewportSize.x - 430.0f * overlayScale, viewportPos.y + 20.0f * overlayScale), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(410.0f * overlayScale, 250.0f * overlayScale), ImGuiCond_FirstUseEver);
 
 		if (!ImGui::Begin("Source Code Highlight##SLL", nullptr,
 			ImGuiWindowFlags_NoCollapse)) {
@@ -362,6 +363,8 @@ void SinglyLinkedListUI::draw() {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	const ImVec2 vpPos = viewport->Pos;
 	const ImVec2 vpSize = viewport->Size;
+	const float layoutScale = std::max(0.70f, std::min(vpSize.x / 1920.0f, vpSize.y / 1080.0f));
+	const float controlScale = std::max(0.90f, layoutScale);
 	const float dt = ImGui::GetIO().DeltaTime;
 	bool userDefinedInputActiveThisFrame = false;
 	const bool wantsTextInput = ImGui::GetIO().WantTextInput;
@@ -400,9 +403,9 @@ void SinglyLinkedListUI::draw() {
 	}
 
 	ImGui::SetNextWindowPos(vpPos);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f));
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 44.0f * layoutScale));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.03f, 0.06f, 0.98f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 8.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * layoutScale, 8.0f * layoutScale));
 	if (ImGui::Begin("##SLLTopBar", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
@@ -414,7 +417,7 @@ void SinglyLinkedListUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f, 26.0f))) {
+		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -424,7 +427,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f, 26.0f))) {
+			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -443,27 +446,28 @@ void SinglyLinkedListUI::draw() {
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 
-	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f;
+	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f * layoutScale;
 	ImGui::SetNextWindowPos(ImVec2(vpPos.x, drawerBottomY), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(52.0f, 200.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(52.0f * layoutScale, 200.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 	if (ImGui::Begin("Operation Toggle##SLL", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings)) {
-		ImGui::SetCursorPosY(84.0f);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f, 32.0f))) {
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::SetCursorPosY(84.0f * layoutScale);
+		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	const float operationPanelWidth = 190.0f * operationPanelOpenT_;
+	const float operationPanelWidth = 190.0f * layoutScale * operationPanelOpenT_;
 	if (operationPanelWidth > 6.0f) {
-		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f, drawerBottomY), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(vpPos.x + 52.0f * layoutScale, drawerBottomY), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(operationPanelWidth, 200.0f * layoutScale), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
 		if (ImGui::Begin("Operations##SLLOperations", nullptr,
 			ImGuiWindowFlags_NoTitleBar |
@@ -471,6 +475,7 @@ void SinglyLinkedListUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			const bool usingMenuListFont = (menuCardTitleFont != nullptr);
 			if (usingMenuListFont) {
 				ImGui::PushFont(menuCardTitleFont);
@@ -479,7 +484,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.14f, 0.48f, 0.22f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.58f, 0.30f, 0.95f));
 				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.12f, 0.42f, 0.20f, 0.98f));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 9.0f));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f * controlScale, 9.0f * controlScale));
 				const char* operationNames[] = { "Create(A)", "Search", "Insert", "Remove", "Update", "Customize" };
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 6; ++i) {
@@ -497,10 +502,10 @@ void SinglyLinkedListUI::draw() {
 		ImGui::End();
 		ImGui::PopStyleColor();
 
-		const float inputPanelWidth = 700.0f * operationPanelOpenT_;
+		const float inputPanelWidth = 700.0f * layoutScale * operationPanelOpenT_;
 		//const bool showCreateEditor = operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0 && userDefinedListExpanded_;
-		const float inputPanelHeight = 200.0f; //showCreateEditor ? 150.0f : 72.0f;
-		const float inputPanelX = vpPos.x + 52.0f + operationPanelWidth + 2.0f;
+		const float inputPanelHeight = 200.0f * layoutScale; //showCreateEditor ? 150.0f : 72.0f;
+		const float inputPanelX = vpPos.x + 52.0f * layoutScale + operationPanelWidth + 2.0f * layoutScale;
 		ImGui::SetNextWindowPos(ImVec2(inputPanelX, drawerBottomY), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(inputPanelWidth, inputPanelHeight), ImGuiCond_Always);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.34f, 0.72f, 0.42f, 0.96f));
@@ -510,34 +515,35 @@ void SinglyLinkedListUI::draw() {
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoScrollbar)) {
+			ImGui::SetWindowFontScale(controlScale);
 			const bool usingMenuInputFont = (menuCardDescFont != nullptr);
 			if (usingMenuInputFont) {
 				ImGui::PushFont(menuCardDescFont);
 			}
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
-				if (ImGui::Button("Empty", ImVec2(56.0f, 0.0f))) {
+				if (ImGui::Button("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeEmpty();
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("User Defined List", ImVec2(200.0f, 0.0f))) {
+				if (ImGui::Button("User Defined List", ImVec2(200.0f * controlScale, 0.0f))) {
 					userDefinedListExpanded_ = !userDefinedListExpanded_;
 				}
 				ImGui::SameLine();
 				ImGui::TextUnformatted("N =");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(100.0f);
+				ImGui::PushItemWidth(100.0f * controlScale);
 				ImGui::InputInt("##CreateCount", &randomCount_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Random", ImVec2(78.0f, 0.0f))) {
+				if (ImGui::Button("Random", ImVec2(78.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeRandom(randomCount_, randomMin_, randomMax_);
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Random Sorted", ImVec2(122.0f, 0.0f))) {
+				if (ImGui::Button("Random Sorted", ImVec2(122.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeRandomSorted(randomCount_, randomMin_, randomMax_);
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
@@ -547,12 +553,12 @@ void SinglyLinkedListUI::draw() {
 					ImGui::Separator();
 					ImGui::TextUnformatted("A =");
 					ImGui::SameLine();
-					ImGui::PushItemWidth(240.0f);
+					ImGui::PushItemWidth(240.0f * controlScale);
 					ImGui::InputText("##UserDefinedValues", userDefinedList_.data(), userDefinedList_.size());
 					userDefinedInputActiveThisFrame = ImGui::IsItemActive();
 					ImGui::PopItemWidth();
 					ImGui::SameLine();
-					if (ImGui::Button("Go", ImVec2(56.0f, 0.0f))) {
+					if (ImGui::Button("Go", ImVec2(56.0f * controlScale, 0.0f))) {
 						const std::vector<int> parsed = singlyLinkedList.parseIntegers(userDefinedList_.data());
 						if (parsed.empty()) {
 							singlyLinkedList.lastMessage = "Initialize failed: enter comma-separated integers";
@@ -564,12 +570,12 @@ void SinglyLinkedListUI::draw() {
 						}
 					}
 
-					ImGui::PushItemWidth(320.0f);
+					ImGui::PushItemWidth(320.0f * controlScale);
 					ImGui::InputText(".txt path", txtPath_.data(), txtPath_.size());
 					ImGui::PopItemWidth();
 
 					ImGui::SameLine();
-					if (ImGui::Button("Browse File", ImVec2(110.0f, 0.0f))) {
+					if (ImGui::Button("Browse File", ImVec2(110.0f * controlScale, 0.0f))) {
 						std::string selectedPath = cr::utils::SimpleFileDialog::dialog();
 
 						if (!selectedPath.empty()) {
@@ -578,7 +584,7 @@ void SinglyLinkedListUI::draw() {
 					}
 
 					ImGui::SameLine();
-					if (ImGui::Button("Load txt", ImVec2(92.0f, 0.0f))) {
+					if (ImGui::Button("Load txt", ImVec2(92.0f * controlScale, 0.0f))) {
 						singlyLinkedList.initializeFromTextFile(txtPath_.data());
 						enableAutoplayDefault();
 					}
@@ -587,11 +593,11 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 1) {
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##SearchValue", &searchValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Search", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Search", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.searchValueViz(searchValue_);
 					enableAutoplayDefault();
 				}
@@ -599,17 +605,17 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 2) {
 				ImGui::TextUnformatted("Index:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##InsertIndex", &addIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##InsertValue", &addValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Insert", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.addAtViz(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
 					enableAutoplayDefault();
 				}
@@ -617,11 +623,11 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
 				ImGui::TextUnformatted("Index:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##RemoveIndex", &deleteIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Remove", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Remove", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.deleteAtViz(static_cast<std::size_t>(std::max(0, deleteIndex_)));
 					enableAutoplayDefault();
 				}
@@ -629,17 +635,17 @@ void SinglyLinkedListUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 4) {
 				ImGui::TextUnformatted("Index:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##UpdateIndex", &updateIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				ImGui::TextUnformatted("Value:");
 				ImGui::SameLine();
-				ImGui::PushItemWidth(90.0f);
+				ImGui::PushItemWidth(90.0f * controlScale);
 				ImGui::InputInt("##UpdateValue", &updateValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Update", ImVec2(90.0f, 0.0f))) {
+				if (ImGui::Button("Update", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.updateAtViz(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
 					enableAutoplayDefault();
 				}
@@ -648,11 +654,11 @@ void SinglyLinkedListUI::draw() {
 				ImGui::TextUnformatted("Style");
 				ImGui::SameLine();
 				const char* stylePresets[] = { "Classic", "Minimal", "Bold" };
-				ImGui::PushItemWidth(150.0f);
+				ImGui::PushItemWidth(150.0f * controlScale);
 				ImGui::Combo("##StylePreset", &visualStylePreset_, stylePresets, IM_ARRAYSIZE(stylePresets));
 				ImGui::PopItemWidth();
 
-				ImGui::PushItemWidth(240.0f);
+				ImGui::PushItemWidth(240.0f * controlScale);
 				ImGui::SliderFloat("Node Size", &nodeRadius_, 18.0f, 44.0f, "%.1f");
 				ImGui::SliderFloat("Border Size", &edgeThickness_, 1.0f, 8.0f, "%.1f");
 				ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
@@ -683,7 +689,7 @@ void SinglyLinkedListUI::draw() {
 				editColor("Value Text", valueTextColor_);
 				editColor("Index Text", indexTextColor_);
 
-				if (ImGui::Button("Reset Visuals", ImVec2(120.0f, 0.0f))) {
+				if (ImGui::Button("Reset Visuals", ImVec2(120.0f * controlScale, 0.0f))) {
 					visualStylePreset_ = 0;
 					nodeRadius_ = 28.0f;
 					edgeThickness_ = 3.0f;
@@ -707,12 +713,12 @@ void SinglyLinkedListUI::draw() {
 		ImGui::PopStyleColor();
 	}
 
-	const float rightTabWidth = 26.0f;
-	const float rightPanelWidth = 480.0f;
-	const float commentY = vpPos.y + vpSize.y - 450.0f;
-	const float commentH = 115.0f;
-	const float codeY = vpPos.y + vpSize.y - 300.0f;
-	const float codeH = 170.0f;
+	const float rightTabWidth = 26.0f * layoutScale;
+	const float rightPanelWidth = 480.0f * layoutScale;
+	const float commentY = vpPos.y + vpSize.y - 450.0f * layoutScale;
+	const float commentH = 115.0f * layoutScale;
+	const float codeY = vpPos.y + vpSize.y - 300.0f * layoutScale;
+	const float codeH = 170.0f * layoutScale;
 	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
 	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -754,8 +760,8 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -813,16 +819,16 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f, 24.0f))) {
+		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
+		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(vpPos.x, vpPos.y + vpSize.y - 48.0f * layoutScale), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(vpSize.x, 48.0f * layoutScale), ImGuiCond_Always);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, 0.98f));
 	if (ImGui::Begin("Playback##SLLBottomPlayback", nullptr,
 		ImGuiWindowFlags_NoTitleBar |
@@ -830,7 +836,8 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
-		ImGui::PushItemWidth(140.0f);
+		ImGui::SetWindowFontScale(controlScale);
+		ImGui::PushItemWidth(140.0f * controlScale);
 		ImGui::SliderFloat("##BottomPlaybackSpeed", &playbackSpeed_, 0.25f, 5.0f, "");
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
@@ -869,8 +876,9 @@ void SinglyLinkedListUI::draw() {
 		if (!singlyLinkedList.timeline.empty()) {
 			int frameIndex = static_cast<int>(singlyLinkedList.cursor);
 			const int maxFrame = static_cast<int>(singlyLinkedList.timeline.size() - 1);
+			const float timelineWidth = std::max(220.0f * layoutScale, vpSize.x * 0.30f * layoutScale);
 			ImGui::SameLine(vpSize.x * 0.58f);
-			ImGui::PushItemWidth(vpSize.x * 0.36f);
+			ImGui::PushItemWidth(timelineWidth);
 			if (ImGui::SliderInt("##BottomTimeline", &frameIndex, 0, maxFrame, "")) {
 				autoplay_ = false;
 				singlyLinkedList.cursor = static_cast<std::size_t>(std::clamp(frameIndex, 0, maxFrame));
