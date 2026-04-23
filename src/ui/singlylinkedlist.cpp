@@ -1,5 +1,6 @@
 #include <ui/singlylinkedlist.h>
 #include <ui/common.h>
+#include <ui/audio_imgui.h>
 
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
@@ -418,7 +419,7 @@ void SinglyLinkedListUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
+		if (AudioButton("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -428,7 +429,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
+			if (AudioButton(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -458,7 +459,7 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings)) {
 		ImGui::SetWindowFontScale(controlScale);
 		ImGui::SetCursorPosY(84.0f * layoutScale);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
+		if (AudioButton(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
@@ -490,6 +491,7 @@ void SinglyLinkedListUI::draw() {
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 6; ++i) {
 					if (ImGui::Selectable(operationNames[i], operationMenuIndex_ == i, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(menuRowWidth, 0.0f))) {
+						audioManager.playClick();
 						operationMenuIndex_ = i;
 					}
 				}
@@ -522,13 +524,13 @@ void SinglyLinkedListUI::draw() {
 				ImGui::PushFont(menuCardDescFont);
 			}
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
-				if (ImGui::Button("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
+				if (AudioButton("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeEmpty();
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("User Defined List", ImVec2(200.0f * controlScale, 0.0f))) {
+				if (AudioButton("User Defined List", ImVec2(200.0f * controlScale, 0.0f))) {
 					userDefinedListExpanded_ = !userDefinedListExpanded_;
 				}
 				ImGui::SameLine();
@@ -538,13 +540,13 @@ void SinglyLinkedListUI::draw() {
 				ImGui::InputInt("##CreateCount", &randomCount_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Random", ImVec2(78.0f * controlScale, 0.0f))) {
+				if (AudioButton("Random", ImVec2(78.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeRandom(randomCount_, randomMin_, randomMax_);
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Random Sorted", ImVec2(122.0f * controlScale, 0.0f))) {
+				if (AudioButton("Random Sorted", ImVec2(122.0f * controlScale, 0.0f))) {
 					singlyLinkedList.initializeRandomSorted(randomCount_, randomMin_, randomMax_);
 					enableAutoplayDefault();
 					userDefinedListExpanded_ = false;
@@ -559,7 +561,7 @@ void SinglyLinkedListUI::draw() {
 					userDefinedInputActiveThisFrame = ImGui::IsItemActive();
 					ImGui::PopItemWidth();
 					ImGui::SameLine();
-					if (ImGui::Button("Go", ImVec2(56.0f * controlScale, 0.0f))) {
+					if (AudioButton("Go", ImVec2(56.0f * controlScale, 0.0f))) {
 						const std::vector<int> parsed = singlyLinkedList.parseIntegers(userDefinedList_.data());
 						if (parsed.empty()) {
 							singlyLinkedList.lastMessage = "Initialize failed: enter comma-separated integers";
@@ -576,7 +578,7 @@ void SinglyLinkedListUI::draw() {
 					ImGui::PopItemWidth();
 
 					ImGui::SameLine();
-					if (ImGui::Button("Browse File", ImVec2(110.0f * controlScale, 0.0f))) {
+					if (AudioButton("Browse File", ImVec2(110.0f * controlScale, 0.0f))) {
 						std::string selectedPath = cr::utils::SimpleFileDialog::dialog();
 
 						if (!selectedPath.empty()) {
@@ -585,7 +587,7 @@ void SinglyLinkedListUI::draw() {
 					}
 
 					ImGui::SameLine();
-					if (ImGui::Button("Load txt", ImVec2(92.0f * controlScale, 0.0f))) {
+					if (AudioButton("Load txt", ImVec2(92.0f * controlScale, 0.0f))) {
 						singlyLinkedList.initializeFromTextFile(txtPath_.data());
 						enableAutoplayDefault();
 					}
@@ -598,7 +600,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::InputInt("##SearchValue", &searchValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Search", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Search", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.searchValueViz(searchValue_);
 					enableAutoplayDefault();
 				}
@@ -616,7 +618,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::InputInt("##InsertValue", &addValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.addAtViz(static_cast<std::size_t>(std::max(0, addIndex_)), addValue_);
 					enableAutoplayDefault();
 				}
@@ -628,7 +630,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::InputInt("##RemoveIndex", &deleteIndex_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Remove", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Remove", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.deleteAtViz(static_cast<std::size_t>(std::max(0, deleteIndex_)));
 					enableAutoplayDefault();
 				}
@@ -646,7 +648,7 @@ void SinglyLinkedListUI::draw() {
 				ImGui::InputInt("##UpdateValue", &updateValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Update", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Update", ImVec2(90.0f * controlScale, 0.0f))) {
 					singlyLinkedList.updateAtViz(static_cast<std::size_t>(std::max(0, updateIndex_)), updateValue_);
 					enableAutoplayDefault();
 				}
@@ -690,7 +692,7 @@ void SinglyLinkedListUI::draw() {
 				editColor("Value Text", valueTextColor_);
 				editColor("Index Text", indexTextColor_);
 
-				if (ImGui::Button("Reset Visuals", ImVec2(120.0f * controlScale, 0.0f))) {
+				if (AudioButton("Reset Visuals", ImVec2(120.0f * controlScale, 0.0f))) {
 					visualStylePreset_ = 0;
 					nodeRadius_ = 28.0f;
 					edgeThickness_ = 3.0f;
@@ -762,7 +764,7 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -821,7 +823,7 @@ void SinglyLinkedListUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
@@ -845,31 +847,31 @@ void SinglyLinkedListUI::draw() {
 		ImGui::Text("%.2gx", playbackSpeed_);
 
 		ImGui::SameLine(vpSize.x * 0.43f);
-		if (ImGui::Button("|<")) {
+		if (AudioButton("|<")) {
 			autoplay_ = false;
 			singlyLinkedList.jumpToStart();
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("<")) {
+		if (AudioButton("<")) {
 			autoplay_ = false;
 			playbackMode_ = PlaybackMode::StepByStep;
 			singlyLinkedList.stepBackward();
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
+		if (AudioButton(autoplay_ ? "[]" : "|>")) {
 			autoplay_ = !autoplay_;
 			if (autoplay_) {
 				playbackMode_ = PlaybackMode::RunAtOnce;
 			}
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">")) {
+		if (AudioButton(">")) {
 			autoplay_ = false;
 			playbackMode_ = PlaybackMode::StepByStep;
 			singlyLinkedList.stepForward();
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">|")) {
+		if (AudioButton(">|")) {
 			autoplay_ = false;
 			singlyLinkedList.jumpToFinal();
 		}

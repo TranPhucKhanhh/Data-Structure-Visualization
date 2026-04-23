@@ -7,6 +7,7 @@
 #include <ui/shortestpath.h>
 #include <ui/singlylinkedlist.h>
 #include <ui/common.h>
+#include <utils/audio_manager.h>
 
 #include <array>
 #include <filesystem>
@@ -40,7 +41,7 @@ namespace {
 		settings.fpsLimit = std::clamp(settings.fpsLimit, 24, 240);
 	}
 
-	bool loadGraphicsSettingsFromConfig(GraphicsSettings& settings)
+	bool loadSettingsFromConfig(GraphicsSettings& graphics, AudioSettings& audio)
 	{
 		const std::filesystem::path configPath = getGraphicsConfigPath();
 		std::ifstream in(configPath);
@@ -48,7 +49,8 @@ namespace {
 			return false;
 		}
 
-		GraphicsSettings loaded = settings;
+		GraphicsSettings loadedGraphics = graphics;
+		AudioSettings loadedAudio = audio;
 		std::string line;
 		while (std::getline(in, line)) {
 			const std::size_t eq = line.find('=');
@@ -59,30 +61,42 @@ namespace {
 			const std::string key = line.substr(0, eq);
 			const std::string value = line.substr(eq + 1);
 			if (key == "windowMode") {
-				loaded.windowMode = (value == "fullscreen") ? WindowMode::Fullscreen : WindowMode::Windowed;
+				loadedGraphics.windowMode = (value == "fullscreen") ? WindowMode::Fullscreen : WindowMode::Windowed;
 			}
 			else if (key == "fxaaEnabled") {
-				loaded.fxaaEnabled = parseBoolValue(value);
+				loadedGraphics.fxaaEnabled = parseBoolValue(value);
 			}
 			else if (key == "antialiasingEnabled") {
-				loaded.antialiasingEnabled = parseBoolValue(value);
+				loadedGraphics.antialiasingEnabled = parseBoolValue(value);
 			}
 			else if (key == "vsyncEnabled") {
-				loaded.vsyncEnabled = parseBoolValue(value);
+				loadedGraphics.vsyncEnabled = parseBoolValue(value);
+			}
+			else if (key == "musicEnabled") {
+				loadedAudio.musicEnabled = parseBoolValue(value);
+			}
+			else if (key == "sfxEnabled") {
+				loadedAudio.sfxEnabled = parseBoolValue(value);
 			}
 			else {
 				try {
 					if (key == "resolutionWidth") {
-						loaded.resolutionWidth = std::stoi(value);
+						loadedGraphics.resolutionWidth = std::stoi(value);
 					}
 					else if (key == "resolutionHeight") {
-						loaded.resolutionHeight = std::stoi(value);
+						loadedGraphics.resolutionHeight = std::stoi(value);
 					}
 					else if (key == "antialiasingLevel") {
-						loaded.antialiasingLevel = std::stoi(value);
+						loadedGraphics.antialiasingLevel = std::stoi(value);
 					}
 					else if (key == "fpsLimit") {
-						loaded.fpsLimit = std::stoi(value);
+						loadedGraphics.fpsLimit = std::stoi(value);
+					}
+					else if (key == "musicVolume") {
+						loadedAudio.musicVolume = std::stof(value);
+					}
+					else if (key == "sfxVolume") {
+						loadedAudio.sfxVolume = std::stof(value);
 					}
 				}
 				catch (const std::exception&) {
@@ -91,11 +105,12 @@ namespace {
 			}
 		}
 
-		settings = loaded;
+		graphics = loadedGraphics;
+		audio = loadedAudio;
 		return true;
 	}
 
-	void saveGraphicsSettingsToConfig(const GraphicsSettings& settings)
+	void saveSettingsToConfig(const GraphicsSettings& graphics, const AudioSettings& audio)
 	{
 		const std::filesystem::path configPath = getGraphicsConfigPath();
 		std::ofstream out(configPath, std::ios::trunc);
@@ -103,14 +118,18 @@ namespace {
 			return;
 		}
 
-		out << "windowMode=" << (settings.windowMode == WindowMode::Fullscreen ? "fullscreen" : "windowed") << '\n';
-		out << "resolutionWidth=" << settings.resolutionWidth << '\n';
-		out << "resolutionHeight=" << settings.resolutionHeight << '\n';
-		out << "fxaaEnabled=" << (settings.fxaaEnabled ? 1 : 0) << '\n';
-		out << "antialiasingEnabled=" << (settings.antialiasingEnabled ? 1 : 0) << '\n';
-		out << "antialiasingLevel=" << settings.antialiasingLevel << '\n';
-		out << "vsyncEnabled=" << (settings.vsyncEnabled ? 1 : 0) << '\n';
-		out << "fpsLimit=" << settings.fpsLimit << '\n';
+		out << "windowMode=" << (graphics.windowMode == WindowMode::Fullscreen ? "fullscreen" : "windowed") << '\n';
+		out << "resolutionWidth=" << graphics.resolutionWidth << '\n';
+		out << "resolutionHeight=" << graphics.resolutionHeight << '\n';
+		out << "fxaaEnabled=" << (graphics.fxaaEnabled ? 1 : 0) << '\n';
+		out << "antialiasingEnabled=" << (graphics.antialiasingEnabled ? 1 : 0) << '\n';
+		out << "antialiasingLevel=" << graphics.antialiasingLevel << '\n';
+		out << "vsyncEnabled=" << (graphics.vsyncEnabled ? 1 : 0) << '\n';
+		out << "fpsLimit=" << graphics.fpsLimit << '\n';
+		out << "musicEnabled=" << (audio.musicEnabled ? 1 : 0) << '\n';
+		out << "musicVolume=" << audio.musicVolume << '\n';
+		out << "sfxEnabled=" << (audio.sfxEnabled ? 1 : 0) << '\n';
+		out << "sfxVolume=" << audio.sfxVolume << '\n';
 	}
 
 	std::filesystem::path resolveFontPath()
@@ -124,6 +143,17 @@ namespace {
 		std::cerr << "Warning: Font file not found at " << path << std::endl;
 		return {};
 
+	}
+
+	std::filesystem::path resolveAudioPath()
+	{
+		const auto path = std::filesystem::path(std::string(ASSET_AUDIO));
+		if (std::filesystem::exists(path)) {
+			return path;
+		}
+
+		std::cerr << "Warning: Audio asset directory not found at " << path << std::endl;
+		return {};
 	}
 
 	void loadMenuFonts()
@@ -232,7 +262,7 @@ namespace {
 			return false;
 		}
 		loadMenuFonts();
-		saveGraphicsSettingsToConfig(uiConfig.graphicsSettings);
+		saveSettingsToConfig(uiConfig.graphicsSettings, uiConfig.audioSettings);
 		return true;
 	}
 }
@@ -251,17 +281,31 @@ int main()
 	uiConfig.graphicsSettings.vsyncEnabled = true;
 	uiConfig.graphicsSettings.fpsLimit = 60;
 	uiConfig.graphicsSettings.fxaaEnabled = false;
-	(void) loadGraphicsSettingsFromConfig(uiConfig.graphicsSettings);
+	uiConfig.audioSettings.musicEnabled = true;
+	uiConfig.audioSettings.musicVolume = 40.0f;
+	uiConfig.audioSettings.sfxEnabled = true;
+	uiConfig.audioSettings.sfxVolume = 70.0f;
+	(void) loadSettingsFromConfig(uiConfig.graphicsSettings, uiConfig.audioSettings);
 	normalizeGraphicsSettings(uiConfig.graphicsSettings, uiConfig.monitorWidth, uiConfig.monitorHeight);
+	uiConfig.audioSettings.musicVolume = std::clamp(uiConfig.audioSettings.musicVolume, 0.0f, 100.0f);
+	uiConfig.audioSettings.sfxVolume = std::clamp(uiConfig.audioSettings.sfxVolume, 0.0f, 100.0f);
 
 	sf::RenderWindow window = createWindowForSettings(uiConfig.graphicsSettings);
 	uiConfig.requestAppQuit = false;
 	uiConfig.requestGraphicsApply = false;
+	uiConfig.requestSettingsSave = false;
 
 	if (!ImGui::SFML::Init(window)) {
 		return -1;
 	}
 	loadMenuFonts();
+
+	const std::filesystem::path audioPath = resolveAudioPath();
+	if (!audioPath.empty()) {
+		(void) audioManager.initialize(audioPath);
+	}
+	audioManager.applySettings(uiConfig.audioSettings);
+	saveSettingsToConfig(uiConfig.graphicsSettings, uiConfig.audioSettings);
 
 	sf::Clock deltaClock;
 
@@ -273,6 +317,11 @@ int main()
 				return -1;
 			}
 			uiConfig.requestGraphicsApply = false;
+		}
+
+		if (uiConfig.requestSettingsSave) {
+			saveSettingsToConfig(uiConfig.graphicsSettings, uiConfig.audioSettings);
+			uiConfig.requestSettingsSave = false;
 		}
 
 		while (const std::optional event = window.pollEvent())

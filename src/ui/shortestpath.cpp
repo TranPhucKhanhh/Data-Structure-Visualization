@@ -1,4 +1,5 @@
 #include <ui/shortestpath.h>
+#include <ui/audio_imgui.h>
 
 #include <imgui.h>
 
@@ -475,7 +476,7 @@ void ShortestPathUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
+		if (AudioButton("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -485,7 +486,7 @@ void ShortestPathUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
+			if (AudioButton(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -525,7 +526,7 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings)) {
 		ImGui::SetWindowFontScale(controlScale);
 		ImGui::SetCursorPosY(84.0f * layoutScale);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
+		if (AudioButton(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
@@ -556,6 +557,7 @@ void ShortestPathUI::draw() {
 				const float menuRowWidth = ImGui::GetContentRegionAvail().x;
 				for (int i = 0; i < 3; ++i) {
 					if (ImGui::Selectable(operationNames[i], operationMenuIndex_ == i, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(menuRowWidth, 0.0f))) {
+						audioManager.playClick();
 						operationMenuIndex_ = i;
 					}
 				}
@@ -590,7 +592,7 @@ void ShortestPathUI::draw() {
 				ImGui::TextUnformatted("Graph Input");
 				ImGui::TextWrapped("Enter each edge as three numbers: u v w. Example: 0 1 4");
 				ImGui::InputTextMultiline("##SPEdgeInput", edgeInput_.data(), edgeInput_.size(), ImVec2(-1.0f, 108.0f));
-				if (ImGui::Button("Random (5-10 nodes)", ImVec2(190.0f * controlScale, 0.0f))) {
+				if (AudioButton("Random (5-10 nodes)", ImVec2(190.0f * controlScale, 0.0f))) {
 					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
 					edgeCount_ = static_cast<int>(graphEdges_.size());
 
@@ -610,7 +612,7 @@ void ShortestPathUI::draw() {
 
 
                 //Update the File Browser button for Shortest Path
-				if (ImGui::Button("Browse File", ImVec2(120.0f * controlScale, 0.0f)))
+				if (AudioButton("Browse File", ImVec2(120.0f * controlScale, 0.0f)))
                 {
                     std::string selected_path = cr::utils::SimpleFileDialog::dialog();
                     if (!selected_path.empty())
@@ -619,7 +621,7 @@ void ShortestPathUI::draw() {
                     }
                 }
                 ImGui::SameLine();
-				if (ImGui::Button("Load from File", ImVec2(120.0f * controlScale, 0.0f)))
+				if (AudioButton("Load from File", ImVec2(120.0f * controlScale, 0.0f)))
                 {
 //                    std::cerr << "0\n";
                     statusMessage_ = shortestPath.initFromFile(txtPath_.data());
@@ -662,7 +664,7 @@ void ShortestPathUI::draw() {
 			else if (operationMenuIndex_ == 1) {
 				ImGui::TextUnformatted("Build / Run");
 				ImGui::TextWrapped("Use the current input to build the graph or run Dijkstra with timeline animation.");
-				if (ImGui::Button("Use sample graph", ImVec2(170.0f * controlScale, 0.0f))) {
+				if (AudioButton("Use sample graph", ImVec2(170.0f * controlScale, 0.0f))) {
 					const char* sampleGraph =
                         "5 6\n"
 						"0 1 4\n"
@@ -684,7 +686,7 @@ void ShortestPathUI::draw() {
 					resetTimeline();
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Build graph", ImVec2(120.0f * controlScale, 0.0f))) {
+				if (AudioButton("Build graph", ImVec2(120.0f * controlScale, 0.0f))) {
                     resetTimeline();
 					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
 
@@ -706,7 +708,7 @@ void ShortestPathUI::draw() {
                     }
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Run Dijkstra", ImVec2(120.0f * controlScale, 0.0f))) {
+				if (AudioButton("Run Dijkstra", ImVec2(120.0f * controlScale, 0.0f))) {
 //					graphEdges_ = parseEdges(edgeInput_.data(), vertexCount_);
 //					edgeCount_ = static_cast<int>(graphEdges_.size());
 //					graphLoaded_ = edgeCount_ > 0;
@@ -767,7 +769,7 @@ void ShortestPathUI::draw() {
 					}
 				}
 				ImGui::SameLine();
-				if (ImGui::Button("Clear graph", ImVec2(120.0f * controlScale, 0.0f))) {
+				if (AudioButton("Clear graph", ImVec2(120.0f * controlScale, 0.0f))) {
 					edgeInput_[0] = '\0';
 					graphEdges_.clear();
 					pathNodes_.clear();
@@ -856,7 +858,7 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -910,7 +912,7 @@ void ShortestPathUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
@@ -934,7 +936,7 @@ void ShortestPathUI::draw() {
 		ImGui::Text("%.2gx", playbackSpeed_);
 
 		ImGui::SameLine(vpSize.x * 0.43f);
-		if (ImGui::Button("|<")) {
+		if (AudioButton("|<")) {
 			autoplay_ = false;
 			currentStepIndex_ = 0;
 			autoplayAccumulator_ = 0.0f;
@@ -942,26 +944,26 @@ void ShortestPathUI::draw() {
 			stepTransitionProgress_ = 1.0f;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("<")) {
+		if (AudioButton("<")) {
 			autoplay_ = false;
 			playbackMode_ = ShortestPathPlaybackMode::StepByStep;
 			startStepTransition(currentStepIndex_ - 1);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
+		if (AudioButton(autoplay_ ? "[]" : "|>")) {
 			autoplay_ = !autoplay_;
 			if (autoplay_) {
 				playbackMode_ = ShortestPathPlaybackMode::RunAtOnce;
 			}
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">")) {
+		if (AudioButton(">")) {
 			autoplay_ = false;
 			playbackMode_ = ShortestPathPlaybackMode::StepByStep;
 			startStepTransition(currentStepIndex_ + 1);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">|")) {
+		if (AudioButton(">|")) {
 			autoplay_ = false;
 			currentStepIndex_ = static_cast<int>(currentSteps_.size());
 			stepTransitioning_ = false;
@@ -1462,3 +1464,4 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 		}
 	}
 }
+

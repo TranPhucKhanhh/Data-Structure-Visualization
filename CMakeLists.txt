@@ -67,6 +67,7 @@ target_compile_features(DataVisualization PRIVATE cxx_std_17)
 target_link_libraries(DataVisualization
     PRIVATE
         ImGui-SFML::ImGui-SFML
+    SFML::Audio
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DataVisualization)
@@ -75,5 +76,8 @@ target_compile_options(DataVisualization PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/FS>
 )
 
-target_compile_definitions(DataVisualization PRIVATE ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts")
+target_compile_definitions(DataVisualization PRIVATE
+    ASSET_FONT="${CMAKE_SOURCE_DIR}/fonts"
+    ASSET_AUDIO="${CMAKE_SOURCE_DIR}/sounds"
+)
 

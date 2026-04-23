@@ -1,5 +1,6 @@
 #include "ui/trie.h"
 #include "ui/common.h"
+#include "ui/audio_imgui.h"
 
 #include <imgui.h>
 
@@ -338,7 +339,7 @@ void TrieUI::draw() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-        if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
+        if (AudioButton("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
             uiConfig.state = UIState::Menu;
         }
 
@@ -348,7 +349,7 @@ void TrieUI::draw() {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
             }
-            if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
+            if (AudioButton(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
                 uiConfig.state = target;
             }
             if (active) {
@@ -404,7 +405,7 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoSavedSettings)) {
         ImGui::SetWindowFontScale(controlScale);
         ImGui::SetCursorPosY(84.0f * layoutScale);
-        if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
+        if (AudioButton(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
             operationPanelCollapsed_ = !operationPanelCollapsed_;
         }
     }
@@ -437,6 +438,7 @@ void TrieUI::draw() {
                 const float menuRowWidth = ImGui::GetContentRegionAvail().x;
                 for (int i = 0; i < 6; ++i) {
                     if (ImGui::Selectable(operationNames[i], operationMenuIndex_ == i, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(menuRowWidth, 0.0f))) {
+                        audioManager.playClick();
                         operationMenuIndex_ = i;
                     }
                 }
@@ -475,13 +477,13 @@ void TrieUI::draw() {
 
                 ImGui::TextUnformatted("Initialize Trie");
 
-                if (ImGui::Button("Empty", ImVec2(90.0f * controlScale, 0.0f))) {
+                if (AudioButton("Empty", ImVec2(90.0f * controlScale, 0.0f))) {
                     captureEmptyAnimationBase();
                     trie.clear();
                     startTimeline({}, 0, "Initialized empty trie");
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Random", ImVec2(90.0f * controlScale, 0.0f))) {
+                if (AudioButton("Random", ImVec2(90.0f * controlScale, 0.0f))) {
                     std::vector<std::string> words = trie.generateRandomWords(randomWordCount_, randomMinLength_, randomMaxLength_);
                     if (words.empty()) {
                         operationResult_ = "Random initialize failed";
@@ -522,7 +524,7 @@ void TrieUI::draw() {
                 ImGui::InputText("##TrieCreateWords", createWords_.data(), createWords_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Go", ImVec2(createRowButtonW, 0.0f))) {
+                if (AudioButton("Go", ImVec2(createRowButtonW, 0.0f))) {
                     std::vector<std::string> words = trie.parseWordList(createWords_.data());
                     if (words.empty()) {
                         operationResult_ = "Create failed: enter comma-separated words (letters only)";
@@ -550,7 +552,7 @@ void TrieUI::draw() {
                 ImGui::PopItemWidth();
 
                 ImGui::SameLine();
-                if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
+                if (AudioButton("Browse File", ImVec2(browseButtonW, 0.0f))) {
                     std::string selectedPath = cr::utils::SimpleFileDialog::dialog();
                     if (!selectedPath.empty()) {
                         std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
@@ -558,7 +560,7 @@ void TrieUI::draw() {
                 }
 
                 ImGui::SameLine();
-                if (ImGui::Button("Load txt", ImVec2(loadButtonW, 0.0f))) {
+                if (AudioButton("Load txt", ImVec2(loadButtonW, 0.0f))) {
                     const std::filesystem::path filePath(txtPath_.data());
                     if (txtPath_[0] == '\0' || !std::filesystem::exists(filePath)) {
                         operationResult_ = "Load failed: file not found";
@@ -584,7 +586,7 @@ void TrieUI::draw() {
                 ImGui::InputText("##TrieSearchWord", searchWord_.data(), searchWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Search", ImVec2(95.0f * controlScale, 0.0f))) {
+                if (AudioButton("Search", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(searchWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Search failed: enter a valid word";
@@ -604,7 +606,7 @@ void TrieUI::draw() {
                 ImGui::InputText("##TrieInsertWord", insertWord_.data(), insertWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Insert", ImVec2(95.0f * controlScale, 0.0f))) {
+                if (AudioButton("Insert", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(insertWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Insert failed: enter a valid word";
@@ -623,7 +625,7 @@ void TrieUI::draw() {
                 ImGui::InputText("##TrieDeleteWord", deleteWord_.data(), deleteWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Remove", ImVec2(95.0f * controlScale, 0.0f))) {
+                if (AudioButton("Remove", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string word = trie.sanitizeWord(deleteWord_.data());
                     if (word.empty()) {
                         operationResult_ = "Remove failed: enter a valid word";
@@ -648,7 +650,7 @@ void TrieUI::draw() {
                 ImGui::InputText("##TrieUpdateNew", updateNewWord_.data(), updateNewWord_.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Update", ImVec2(95.0f * controlScale, 0.0f))) {
+                if (AudioButton("Update", ImVec2(95.0f * controlScale, 0.0f))) {
                     const std::string oldWord = trie.sanitizeWord(updateOldWord_.data());
                     const std::string newWord = trie.sanitizeWord(updateNewWord_.data());
                     if (oldWord.empty() || newWord.empty()) {
@@ -668,7 +670,7 @@ void TrieUI::draw() {
                 ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
                 ImGui::PopItemWidth();
                 ImGui::Checkbox("Code Overlay", &showCodeOverlay_);
-                if (ImGui::Button("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
+                if (AudioButton("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
                     nodeRadius_ = 28.0f;
                     edgeThickness_ = 3.0f;
                     fontScale_ = 1.0f;
@@ -755,7 +757,7 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoScrollbar)) {
         ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
-        if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+        if (AudioButton(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
             commentPanelCollapsed_ = !commentPanelCollapsed_;
         }
     }
@@ -812,7 +814,7 @@ void TrieUI::draw() {
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoScrollbar)) {
         ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
-        if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+        if (AudioButton(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
             codePanelCollapsed_ = !codePanelCollapsed_;
         }
     }
@@ -836,7 +838,7 @@ void TrieUI::draw() {
         ImGui::Text("%.2gx", playbackSpeed_);
 
         ImGui::SameLine(vpSize.x * 0.43f);
-        if (ImGui::Button("|<")) {
+        if (AudioButton("|<")) {
             autoplay_ = false;
             currentStepIndex_ = 0;
             autoplayAccumulator_ = 0.0f;
@@ -844,26 +846,26 @@ void TrieUI::draw() {
             stepTransitionProgress_ = 1.0f;
         }
         ImGui::SameLine();
-        if (ImGui::Button("<")) {
+        if (AudioButton("<")) {
             autoplay_ = false;
             playbackMode_ = TriePlaybackMode::StepByStep;
             startStepTransition(currentStepIndex_ - 1);
         }
         ImGui::SameLine();
-        if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
+        if (AudioButton(autoplay_ ? "[]" : "|>")) {
             autoplay_ = !autoplay_;
             if (autoplay_) {
                 playbackMode_ = TriePlaybackMode::RunAtOnce;
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button(">")) {
+        if (AudioButton(">")) {
             autoplay_ = false;
             playbackMode_ = TriePlaybackMode::StepByStep;
             startStepTransition(currentStepIndex_ + 1);
         }
         ImGui::SameLine();
-        if (ImGui::Button(">|")) {
+        if (AudioButton(">|")) {
             autoplay_ = false;
             currentStepIndex_ = static_cast<int>(currentSteps_.size());
             stepTransitioning_ = false;
@@ -1201,3 +1203,4 @@ void TrieUI::drawTrieNode(
         currentX += slotWidth * static_cast<float>(childInfo.leafSlots);
     }
 }
+
