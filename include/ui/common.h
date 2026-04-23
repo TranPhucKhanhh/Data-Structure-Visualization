@@ -39,6 +39,7 @@ struct UIConfig {
 	UIState state = UIState::Menu; // Mặc định khi mở app lên sẽ ở Menu
 	bool requestAppQuit = false;
 	bool requestGraphicsApply = false;
+	bool requestSettingsSave = false;
 	GraphicsSettings graphicsSettings;
 	AudioSettings audioSettings;
 	int monitorWidth = 1920;

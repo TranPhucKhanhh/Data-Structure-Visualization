@@ -293,6 +293,7 @@ int main()
 	sf::RenderWindow window = createWindowForSettings(uiConfig.graphicsSettings);
 	uiConfig.requestAppQuit = false;
 	uiConfig.requestGraphicsApply = false;
+	uiConfig.requestSettingsSave = false;
 
 	if (!ImGui::SFML::Init(window)) {
 		return -1;
@@ -316,6 +317,11 @@ int main()
 				return -1;
 			}
 			uiConfig.requestGraphicsApply = false;
+		}
+
+		if (uiConfig.requestSettingsSave) {
+			saveSettingsToConfig(uiConfig.graphicsSettings, uiConfig.audioSettings);
+			uiConfig.requestSettingsSave = false;
 		}
 
 		while (const std::optional event = window.pollEvent())

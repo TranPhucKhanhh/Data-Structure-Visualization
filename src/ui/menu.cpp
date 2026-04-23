@@ -1,5 +1,6 @@
 #include "ui/menu.h"
 #include "ui/common.h"
+#include "utils/audio_manager.h"
 
 #include <algorithm>
 #include <array>
@@ -273,8 +274,11 @@ void MenuUI::draw() {
 	} };
 
 	static GraphicsSettings draftSettings = uiConfig.graphicsSettings;
+	static AudioSettings draftAudioSettings = uiConfig.audioSettings;
 	if (ImGui::IsPopupOpen("Graphics Settings##MainMenu") == false) {
 		draftSettings = uiConfig.graphicsSettings;
+		draftAudioSettings = uiConfig.audioSettings;
+		audioManager.applySettings(uiConfig.audioSettings);
 	}
 
 	const ImVec2 settingsSize(180.0f * uiScale, 44.0f * uiScale);
@@ -287,6 +291,7 @@ void MenuUI::draw() {
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(32, 102, 144, 255));
 	if (ImGui::Button("SETTINGS", settingsSize)) {
 		draftSettings = uiConfig.graphicsSettings;
+		draftAudioSettings = uiConfig.audioSettings;
 		ImGui::OpenPopup("Graphics Settings##MainMenu");
 	}
 	ImGui::PopStyleColor(3);
@@ -388,17 +393,43 @@ void MenuUI::draw() {
 			draftSettings.fpsLimit = kFpsOptions[fpsIndex];
 		}
 
+		ImGui::Separator();
+		ImGui::TextUnformatted("Audio");
+
+		if (ImGui::Checkbox("Background Music", &draftAudioSettings.musicEnabled)) {
+			audioManager.setMusicEnabled(draftAudioSettings.musicEnabled);
+		}
+		if (ImGui::SliderFloat("Music Volume", &draftAudioSettings.musicVolume, 0.0f, 100.0f, "%.0f%%")) {
+			draftAudioSettings.musicVolume = std::clamp(draftAudioSettings.musicVolume, 0.0f, 100.0f);
+			audioManager.setMusicVolume(draftAudioSettings.musicVolume);
+		}
+		if (ImGui::Checkbox("Button Sound", &draftAudioSettings.sfxEnabled)) {
+			audioManager.setSfxEnabled(draftAudioSettings.sfxEnabled);
+			audioManager.playClick();
+		}
+		if (ImGui::SliderFloat("SFX Volume", &draftAudioSettings.sfxVolume, 0.0f, 100.0f, "%.0f%%")) {
+			draftAudioSettings.sfxVolume = std::clamp(draftAudioSettings.sfxVolume, 0.0f, 100.0f);
+			audioManager.setSfxVolume(draftAudioSettings.sfxVolume);
+			audioManager.playClick();
+		}
+
 		ImGui::Spacing();
 		if (ImGui::Button("Apply", ImVec2(120.0f, 0.0f))) {
 			draftSettings.antialiasingLevel = std::clamp(draftSettings.antialiasingLevel, 0, 16);
 			draftSettings.antialiasingEnabled = draftSettings.antialiasingLevel > 0;
 			draftSettings.fpsLimit = std::max(24, draftSettings.fpsLimit);
+			draftAudioSettings.musicVolume = std::clamp(draftAudioSettings.musicVolume, 0.0f, 100.0f);
+			draftAudioSettings.sfxVolume = std::clamp(draftAudioSettings.sfxVolume, 0.0f, 100.0f);
 			uiConfig.graphicsSettings = draftSettings;
+			uiConfig.audioSettings = draftAudioSettings;
+			audioManager.applySettings(uiConfig.audioSettings);
 			uiConfig.requestGraphicsApply = true;
+			uiConfig.requestSettingsSave = true;
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) {
+			audioManager.applySettings(uiConfig.audioSettings);
 			ImGui::CloseCurrentPopup();
 		}
 
