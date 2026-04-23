@@ -1,6 +1,10 @@
+![Menu of the program](images/menu.png)
+
 # Data Structure Visualization
 
 An interactive desktop application for visualizing data structures and algorithms through animated playback, highlighted states, and step-by-step execution.
+
+The project's UI is inspired by [https://visualgo.net](https://visualgo.net)
 
 ## Team
 
@@ -27,89 +31,22 @@ It provides a desktop UI where users can switch between modules, input data manu
 
 ## Implemented Modules
 
+### Singly Linked List
+
+![Singly Linked List view from the program](images/list.png)
+
 ### Trie
 
-The trie visualizer supports:
-
-- Initialize from a list of words
-- Initialize from file
-- Insert a word
-- Search for a word
-- Delete a word
-- Update a word
+![Trie view from the program](images/trie.png)
 
 ### Heap
 
-The heap visualizer supports:
+![Heap view from the program](images/heap.png)
 
-- Initialize from a list
-- Initialize from file
-- Generate random input
-- Insert a value
-- Search for a value
-- Delete the top node
-- Update a value
-- Switch between min-heap and max-heap
-
-### Singly Linked List
-
-The singly linked list visualizer supports:
-
-- Initialize random data
-- Initialize from a user-defined list
-- Initialize from text file
-- Add at index
-- Delete at index
-- Update at index
-- Search by value
 
 ### Shortest Path
 
-The shortest path visualizer supports:
-
-- Graph input using weighted edges
-- Dijkstra shortest path execution
-- Step-by-step playback
-- Visual highlighting of nodes, relaxed edges, and final path
-
-## Main Features
-
-- Interactive menu-based desktop interface
-- Step-by-step and run-at-once playback modes
-- Animated transitions between algorithm states
-- Visual highlighting of active and affected nodes
-- Zooming and panning on visualization canvases
-- Operation, comment, and code panels
-- File input support through a simple file dialog
-- Custom font loading from the local `fonts/` folder
-
-## Project Structure
-
-```text
-data-visualize/
-|-- include/
-|   |-- logic/      # Core algorithm and data structure declarations
-|   |-- ui/         # UI declarations for each module
-|   `-- utils/      # Utility headers
-|-- src/
-|   |-- logic/      # Logic implementations
-|   |-- ui/         # Rendering and interaction implementations
-|   `-- utils/      # Utility implementations
-|-- fonts/          # Font assets used by the UI
-|-- .github/
-|   `-- workflows/  # CI pipeline
-|-- CMakeLists.txt
-`-- README.md
-```
-
-## Architecture
-
-The project is split into two main layers:
-
-- `logic` contains the underlying data structures and algorithm implementations.
-- `ui` contains the ImGui panels and SFML drawing code used to animate and render each module.
-
-Most modules expose operation timelines or instruction sequences so the UI can replay each algorithm step visually instead of only showing the final result.
+![Shortest Path view from the program](images/path.png)
 
 ## Build Instructions
 
