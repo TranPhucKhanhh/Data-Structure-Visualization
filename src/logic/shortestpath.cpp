@@ -221,16 +221,19 @@ std::vector<ShortestPathInstruction> ShortestPath::getDijkstraStep(int start, in
     std::priority_queue<NodePair, std::vector<NodePair>, std::greater<NodePair>> pq;
 
     pq.push({0, start});
-    steps.push_back(ShortestPathInstruction(ShortestPathOp::UPDATE_DISTANCE, start, -1, 0));
+    steps.push_back(ShortestPathInstruction(ShortestPathOp::INIT_START, start, -1, 0));
 
     while (!pq.empty())
     {
         int u = pq.top().second, c = pq.top().first;
 
         pq.pop();
-        if (c > dist[u]) continue;
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::POP_NODE, u, -1, c));
+        if (c > dist[u]) {
+            steps.push_back(ShortestPathInstruction(ShortestPathOp::SKIP_STALE, u, -1, c));
+            continue;
+        }
 
-        steps.push_back(ShortestPathInstruction(ShortestPathOp::HIGHLIGHT_NODE, u));
         steps.push_back(ShortestPathInstruction(ShortestPathOp::MARK_PERMANENT, u));
 
         if (u == finish) break;
@@ -267,6 +270,7 @@ std::vector<ShortestPathInstruction> ShortestPath::getDijkstraStep(int start, in
             steps.push_back(ShortestPathInstruction(ShortestPathOp::FOUND_PATH, cur, parent[cur]));
             cur = parent[cur];
         }
+        steps.push_back(ShortestPathInstruction(ShortestPathOp::RETURN_SUCCESS));
     }
 
     return steps;
@@ -284,11 +288,25 @@ SPVisualState ShortestPath::buildVisualState(const std::vector<ShortestPathInstr
 	for (int i = 0; i < count; ++i) {
         const ShortestPathInstruction& step = steps[static_cast<std::size_t>(i)];
 		switch (step.op_type) {
-		case ShortestPathOp::HIGHLIGHT_NODE:
+        case ShortestPathOp::INIT_START:
+            if (step.node_u >= 0 && step.node_u < static_cast<int>(state.distances.size())) {
+                state.distances[static_cast<std::size_t>(step.node_u)] = step.weight;
+                state.activeNode = step.node_u;
+            }
+            state.relaxU = -1;
+            state.relaxV = -1;
+            break;
+        case ShortestPathOp::POP_NODE:
+        case ShortestPathOp::HIGHLIGHT_NODE:
             state.activeNode = step.node_u;
 			state.relaxU = -1;
 			state.relaxV = -1;
 			break;
+        case ShortestPathOp::SKIP_STALE:
+            state.activeNode = step.node_u;
+            state.relaxU = -1;
+            state.relaxV = -1;
+            break;
         case ShortestPathOp::RELAX_EDGE:
             state.relaxU = step.node_u;
 			state.relaxV = step.node_v;
@@ -323,6 +341,8 @@ SPVisualState ShortestPath::buildVisualState(const std::vector<ShortestPathInstr
         case ShortestPathOp::NOT_FOUND:
             state.noPath = true;
 			break;
+        case ShortestPathOp::RETURN_SUCCESS:
+            break;
         default:
             break;
         }

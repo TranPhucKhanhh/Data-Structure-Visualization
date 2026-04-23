@@ -15,11 +15,15 @@
 
 enum class ShortestPathOp
 {
+    INIT_START,     // Initialize distance for the source node
+    POP_NODE,       // Pop the next node from the priority queue
+    SKIP_STALE,     // Skip an outdated queue entry
     HIGHLIGHT_NODE, //Focus on the current node being processed
     RELAX_EDGE,     //Inspect/Update an edge weight
     UPDATE_DISTANCE,//Update the distance value in the tracking table
     MARK_PERMANENT, //Mark a node as having its shortest path finalized
     FOUND_PATH,     //Identify and mark nodes belonging to the successful route
+    RETURN_SUCCESS, //Return success after path reconstruction
     NOT_FOUND       //Mark that no path exists between the selected nodes
 };
 

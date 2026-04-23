@@ -76,11 +76,17 @@ namespace {
 
 	const char* kRunCode[] = {
 		"1  FUNCTION dijkstra(start, end):",
-		"2      initialize dist[] = INF, parent[] = -1",
-		"3      pop the node with smallest tentative distance",
-		"4      relax each outgoing edge",
-		"5      update distance and parent when better",
-		"6      reconstruct path from end"
+		"2      dist[] = INF; parent[] = -1; dist[start] = 0",
+		"3      WHILE pq IS NOT empty:",
+		"4          u = pq.top(); pq.pop()",
+		"5          IF u IS already finalized: CONTINUE",
+		"6          mark u as permanent",
+		"7          FOR EACH edge (u, v, w):",
+		"8              IF dist[v] > dist[u] + w:",
+		"9                  dist[v] = dist[u] + w; parent[v] = u",
+		"10     IF dist[end] == INF: RETURN false",
+		"11     WHILE end != -1: path.push_back(end); end = parent[end]",
+		"12     RETURN true"
 	};
 
 	const char* kSettingsCode[] = {
@@ -98,7 +104,7 @@ namespace {
 			break;
 		case 1:
 			codeArray = kRunCode;
-			lineCount = 6;
+			lineCount = 12;
 			title = "DIJKSTRA";
 			break;
 		case 2:
@@ -114,32 +120,46 @@ namespace {
 		}
 	}
 
-	int mapInstructionToCodeLine(const ShortestPathInstruction* instruction, int menuIndex, bool finished) {
+	std::vector<int> mapInstructionToCodeLines(const ShortestPathInstruction* instruction, int menuIndex, bool finished) {
 		if (menuIndex != 1) {
-			return 1;
+			return {1};
 		}
 
-		if (finished) {
-			return 6;
+		if (finished && instruction != nullptr) {
+			if (instruction->op_type == ShortestPathOp::RETURN_SUCCESS) {
+				return {12};
+			}
+			if (instruction->op_type == ShortestPathOp::NOT_FOUND) {
+				return {10};
+			}
 		}
 
 		if (instruction == nullptr) {
-			return 2;
+			return {2};
 		}
 
 		switch (instruction->op_type) {
+		case ShortestPathOp::INIT_START:
+			return {2};
+		case ShortestPathOp::POP_NODE:
 		case ShortestPathOp::HIGHLIGHT_NODE:
+			return {3, 4};
+		case ShortestPathOp::SKIP_STALE:
+			return {5};
 		case ShortestPathOp::MARK_PERMANENT:
-			return 3;
+			return {6};
 		case ShortestPathOp::RELAX_EDGE:
-			return 4;
+			return {7};
 		case ShortestPathOp::UPDATE_DISTANCE:
-			return 5;
+			return {8, 9};
 		case ShortestPathOp::FOUND_PATH:
+			return {11};
+		case ShortestPathOp::RETURN_SUCCESS:
+			return {12};
 		case ShortestPathOp::NOT_FOUND:
-			return 6;
+			return {10};
 		default:
-			return 2;
+			return {2};
 		}
 	}
 
@@ -149,8 +169,13 @@ namespace {
 		}
 
 		switch (instruction->op_type) {
+		case ShortestPathOp::INIT_START:
+			return "Initialize dist[" + std::to_string(instruction->node_u) + "] = " + std::to_string(instruction->weight);
+		case ShortestPathOp::POP_NODE:
 		case ShortestPathOp::HIGHLIGHT_NODE:
-			return "Processing node " + std::to_string(instruction->node_u);
+			return "Pop node " + std::to_string(instruction->node_u) + " from pq";
+		case ShortestPathOp::SKIP_STALE:
+			return "Skip outdated entry of node " + std::to_string(instruction->node_u);
 		case ShortestPathOp::RELAX_EDGE:
 			return "Relax edge " + std::to_string(instruction->node_u) + " -> " + std::to_string(instruction->node_v) +
 				" (w=" + std::to_string(instruction->weight) + ")";
@@ -160,6 +185,8 @@ namespace {
 			return "Mark node " + std::to_string(instruction->node_u) + " as permanent";
 		case ShortestPathOp::FOUND_PATH:
 			return "Path reconstruction visits node " + std::to_string(instruction->node_u);
+		case ShortestPathOp::RETURN_SUCCESS:
+			return "Return true";
 		case ShortestPathOp::NOT_FOUND:
 			return "No path exists between the selected nodes";
 		default:
@@ -779,18 +806,18 @@ void ShortestPathUI::draw() {
 		: nullptr;
 	const int panelMenuIndex = hasTimeline && lastOperationMenuIndex_ >= 0 ? lastOperationMenuIndex_ : operationMenuIndex_;
 	const bool operationFinished = hasTimeline && displayStep >= static_cast<int>(currentSteps_.size());
-	const int highlightedCodeLine = mapInstructionToCodeLine(displayInstruction, panelMenuIndex, operationFinished);
+	const std::vector<int> highlightedCodeLines = mapInstructionToCodeLines(displayInstruction, panelMenuIndex, operationFinished);
 	const SPVisualState panelState = shortestPath.buildVisualState(currentSteps_, displayStep, vertexCount_);
 
 	const std::string currentComment = instructionToComment(displayInstruction, statusMessage_);
 	const std::string distanceArrayText = formatDistanceArray(panelState);
 
-	const float commentY = vpPos.y + vpSize.y - 450.0f * layoutScale;
+	const float commentY = vpPos.y + vpSize.y - 560.0f * layoutScale;
 	const float commentH = 115.0f * layoutScale;
-	const float codeY = vpPos.y + vpSize.y - 300.0f * layoutScale;
-	const float codeH = 170.0f * layoutScale;
+	const float codeY = vpPos.y + vpSize.y - 400.0f * layoutScale;
+	const float codeH = 260.0f * layoutScale;
 	const float rightTabWidth = 26.0f * layoutScale;
-	const float rightPanelWidth = 480.0f * layoutScale;
+	const float rightPanelWidth = 560.0f * layoutScale;
 	const float rightTabX = vpPos.x + vpSize.x - rightTabWidth;
 
 	const float animatedCommentWidth = rightPanelWidth * commentPanelOpenT_;
@@ -858,7 +885,7 @@ void ShortestPathUI::draw() {
 					ImGui::Text("Operation: %s", opTitle);
 					ImGui::Separator();
 					for (int i = 0; i < lineCount; ++i) {
-						if ((i + 1) == highlightedCodeLine) {
+						if (std::find(highlightedCodeLines.begin(), highlightedCodeLines.end(), i + 1) != highlightedCodeLines.end()) {
 							ImGui::TextColored(ImVec4(0.16f, 0.32f, 0.10f, 1.0f), "> %s", codeArray[i]);
 						}
 						else {
