@@ -1,5 +1,6 @@
 #include "ui/menu.h"
 #include "ui/common.h"
+#include "ui/audio_imgui.h"
 #include "utils/audio_manager.h"
 
 #include <algorithm>
@@ -222,7 +223,7 @@ void MenuUI::draw() {
 
 	auto drawCard = [&](const char* id, const char* label, const char* desc, UIState state, ImU32 previewBg, int iconType, const ImVec2& pos) {
 		ImGui::SetCursorScreenPos(pos);
-		ImGui::InvisibleButton(id, ImVec2(cardWidth, cardHeight));
+		AudioInvisibleButton(id, ImVec2(cardWidth, cardHeight));
 		const bool hovered = ImGui::IsItemHovered();
 		if (ImGui::IsItemClicked()) {
 			uiConfig.state = state;
@@ -289,7 +290,7 @@ void MenuUI::draw() {
 	ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(45, 128, 179, 255));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(58, 146, 199, 255));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(32, 102, 144, 255));
-	if (ImGui::Button("SETTINGS", settingsSize)) {
+	if (AudioButton("SETTINGS", settingsSize)) {
 		draftSettings = uiConfig.graphicsSettings;
 		draftAudioSettings = uiConfig.audioSettings;
 		ImGui::OpenPopup("Graphics Settings##MainMenu");
@@ -414,7 +415,7 @@ void MenuUI::draw() {
 		}
 
 		ImGui::Spacing();
-		if (ImGui::Button("Apply", ImVec2(120.0f, 0.0f))) {
+		if (AudioButton("Apply", ImVec2(120.0f, 0.0f))) {
 			draftSettings.antialiasingLevel = std::clamp(draftSettings.antialiasingLevel, 0, 16);
 			draftSettings.antialiasingEnabled = draftSettings.antialiasingLevel > 0;
 			draftSettings.fpsLimit = std::max(24, draftSettings.fpsLimit);
@@ -428,7 +429,7 @@ void MenuUI::draw() {
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) {
+		if (AudioButton("Cancel", ImVec2(120.0f, 0.0f))) {
 			audioManager.applySettings(uiConfig.audioSettings);
 			ImGui::CloseCurrentPopup();
 		}
@@ -443,7 +444,7 @@ void MenuUI::draw() {
 	ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(209, 67, 49, 255));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(221, 86, 67, 255));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(180, 54, 40, 255));
-	if (ImGui::Button("QUIT", quitSize)) {
+	if (AudioButton("QUIT", quitSize)) {
 		uiConfig.requestAppQuit = true;
 	}
 	ImGui::PopStyleColor(3);

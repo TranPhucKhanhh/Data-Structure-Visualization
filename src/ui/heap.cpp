@@ -1,5 +1,6 @@
 #include <ui/heap.h>
 #include <ui/common.h>
+#include <ui/audio_imgui.h>
 
 #include <imgui.h>
 
@@ -365,7 +366,7 @@ void HeapUI::draw() {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.28f, 0.34f, 0.46f, 0.80f));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.84f, 0.88f, 0.94f, 1.0f));
 
-		if (ImGui::Button("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
+		if (AudioButton("MAIN MENU", ImVec2(112.0f * layoutScale, 26.0f * layoutScale))) {
 			uiConfig.state = UIState::Menu;
 		}
 
@@ -375,7 +376,7 @@ void HeapUI::draw() {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.30f, 0.42f, 0.85f));
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 			}
-			if (ImGui::Button(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
+			if (AudioButton(label, ImVec2(132.0f * layoutScale, 26.0f * layoutScale))) {
 				uiConfig.state = target;
 			}
 			if (active) {
@@ -412,7 +413,7 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings)) {
 		ImGui::SetWindowFontScale(controlScale);
 		ImGui::SetCursorPosY(84.0f * layoutScale);
-		if (ImGui::Button(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
+		if (AudioButton(operationPanelCollapsed_ ? ">" : "<", ImVec2(34.0f * layoutScale, 32.0f * layoutScale))) {
 			operationPanelCollapsed_ = !operationPanelCollapsed_;
 		}
 	}
@@ -466,11 +467,11 @@ void HeapUI::draw() {
 			if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 0) {
 				ImGui::Text("Heap Type: %s", heap.getType() == HeapType::MinHeap ? "MinHeap" : "MaxHeap");
 				ImGui::SameLine();
-				if (ImGui::Button("Swap Type", ImVec2(100.0f * controlScale, 0.0f))) {
+				if (AudioButton("Swap Type", ImVec2(100.0f * controlScale, 0.0f))) {
 					switchHeapType();
 				}
 
-				if (ImGui::Button("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
+				if (AudioButton("Empty", ImVec2(56.0f * controlScale, 0.0f))) {
 					heap.clear();
 					startTimeline({}, {}, 0, "Initialized empty heap");
 				}
@@ -481,7 +482,7 @@ void HeapUI::draw() {
 				ImGui::InputInt("##HeapCreateCount", &randomCount_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Random", ImVec2(78.0f * controlScale, 0.0f))) {
+				if (AudioButton("Random", ImVec2(78.0f * controlScale, 0.0f))) {
 
 					std::vector<HeapInstruction> steps = heap.initRandomStep(randomCount_);
 					startTimeline(std::move(steps), heap.getData(), 0, "Initialized random heap");
@@ -494,7 +495,7 @@ void HeapUI::draw() {
 				ImGui::InputText("##HeapCreateValues", createValues_.data(), createValues_.size());
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Go", ImVec2(56.0f * controlScale, 0.0f))) {
+				if (AudioButton("Go", ImVec2(56.0f * controlScale, 0.0f))) {
 					const std::vector<int> values = heap.parseIntegers(createValues_.data());
 					if (values.empty()) {
 						operationResult_ = "Create failed: enter comma-separated integers";
@@ -515,7 +516,7 @@ void HeapUI::draw() {
 				ImGui::PopItemWidth();
 
 				ImGui::SameLine();
-				if (ImGui::Button("Browse File", ImVec2(browseButtonW, 0.0f))) {
+				if (AudioButton("Browse File", ImVec2(browseButtonW, 0.0f))) {
 					std::string selectedPath = cr::utils::SimpleFileDialog::dialog ();
 					if (!selectedPath.empty()) {
 						std::snprintf(txtPath_.data(), txtPath_.size(), "%s", selectedPath.c_str());
@@ -523,7 +524,7 @@ void HeapUI::draw() {
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Load txt", ImVec2(loadButtonW, 0.0f))) {
+				if (AudioButton("Load txt", ImVec2(loadButtonW, 0.0f))) {
 					try {
 						heap.clear();
 						std::vector<HeapInstruction> steps = heap.initFromFileStep(txtPath_.data());
@@ -541,7 +542,7 @@ void HeapUI::draw() {
 				ImGui::InputInt("##HeapSearchValue", &searchValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Search", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Search", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.searchValueStep(searchValue_);
 					const bool found = !steps.empty() && steps.back().heap_op == HeapOp::FoundValue;
@@ -555,14 +556,14 @@ void HeapUI::draw() {
 				ImGui::InputInt("##HeapInsertValue", &insertValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Insert", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.insertValueStep(insertValue_);
 					startTimeline(std::move(steps), base, 2, "Inserted value");
 				}
 			}
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 3) {
-				if (ImGui::Button("Remove Top", ImVec2(110.0f * controlScale, 0.0f))) {
+				if (AudioButton("Remove Top", ImVec2(110.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.deleteTopStep();
 					startTimeline(std::move(steps), base, 3, "Removed top node");
@@ -581,7 +582,7 @@ void HeapUI::draw() {
 				ImGui::InputInt("##HeapUpdateNew", &updateNewValue_);
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
-				if (ImGui::Button("Update", ImVec2(90.0f * controlScale, 0.0f))) {
+				if (AudioButton("Update", ImVec2(90.0f * controlScale, 0.0f))) {
 					const std::vector<int> base = heap.getData();
 					std::vector<HeapInstruction> steps = heap.updateValueStep(updateOldValue_, updateNewValue_);
 					startTimeline(std::move(steps), base, 4, "Update operation");
@@ -590,7 +591,7 @@ void HeapUI::draw() {
 			else if (operationPanelOpenT_ > 0.65f && operationMenuIndex_ == 5) {
 				ImGui::Text("Heap Type: %s", heap.getType() == HeapType::MinHeap ? "MinHeap" : "MaxHeap");
 				ImGui::SameLine();
-				if (ImGui::Button("Swap Type##Customize", ImVec2(110.0f * controlScale, 0.0f))) {
+				if (AudioButton("Swap Type##Customize", ImVec2(110.0f * controlScale, 0.0f))) {
 					switchHeapType();
 				}
 
@@ -600,7 +601,7 @@ void HeapUI::draw() {
 				ImGui::SliderFloat("Font Scale", &fontScale_, 0.7f, 1.8f, "%.2f");
 				ImGui::PopItemWidth();
 				ImGui::Checkbox("Code Overlay", &showCodeOverlay_);
-				if (ImGui::Button("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
+				if (AudioButton("Reset Visuals", ImVec2(124.0f * controlScale, 0.0f))) {
 					nodeRadius_ = 28.0f;
 					edgeThickness_ = 3.0f;
 					fontScale_ = 1.0f;
@@ -677,7 +678,7 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(commentH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(commentPanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			commentPanelCollapsed_ = !commentPanelCollapsed_;
 		}
 	}
@@ -733,7 +734,7 @@ void HeapUI::draw() {
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoScrollbar)) {
 		ImGui::SetCursorPosY(codeH * 0.5f - 12.0f * layoutScale);
-		if (ImGui::Button(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
+		if (AudioButton(codePanelCollapsed_ ? "<" : ">", ImVec2(18.0f * layoutScale, 24.0f * layoutScale))) {
 			codePanelCollapsed_ = !codePanelCollapsed_;
 		}
 	}
@@ -757,7 +758,7 @@ void HeapUI::draw() {
 		ImGui::Text("%.2gx", playbackSpeed_);
 
 		ImGui::SameLine(vpSize.x * 0.43f);
-		if (ImGui::Button("|<")) {
+		if (AudioButton("|<")) {
 			autoplay_ = false;
 			currentStepIndex_ = 0;
 			autoplayAccumulator_ = 0.0f;
@@ -765,26 +766,26 @@ void HeapUI::draw() {
 			stepTransitionProgress_ = 1.0f;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("<")) {
+		if (AudioButton("<")) {
 			autoplay_ = false;
 			playbackMode_ = HeapPlaybackMode::StepByStep;
 			startStepTransition(currentStepIndex_ - 1);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(autoplay_ ? "[]" : "|>")) {
+		if (AudioButton(autoplay_ ? "[]" : "|>")) {
 			autoplay_ = !autoplay_;
 			if (autoplay_) {
 				playbackMode_ = HeapPlaybackMode::RunAtOnce;
 			}
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">")) {
+		if (AudioButton(">")) {
 			autoplay_ = false;
 			playbackMode_ = HeapPlaybackMode::StepByStep;
 			startStepTransition(currentStepIndex_ + 1);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(">|")) {
+		if (AudioButton(">|")) {
 			autoplay_ = false;
 			currentStepIndex_ = static_cast<int>(currentSteps_.size());
 			stepTransitioning_ = false;
@@ -1226,3 +1227,4 @@ void HeapUI::drawSfml(sf::RenderWindow& window) {
 		}
 	}
 }
+
