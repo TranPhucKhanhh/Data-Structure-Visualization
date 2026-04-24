@@ -1483,4 +1483,3 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 		}
 	}
 }
-

@@ -379,28 +379,31 @@ std::vector<TrieInstruction> Trie::updateWordStep(const std::string& _old_word, 
 
 //Logic functions transferred from UI file
 
-std::vector<std::string> Trie::generateRandomWords(int count, int minLength, int maxLength) {
-    std::vector<std::string> words;
-    count = std::max(0, count);
-    minLength = std::max(1, minLength);
-    maxLength = std::max(minLength, maxLength);
+std::vector<std::string> Trie::generateRandomWords(int _count, int _min_length, int _max_length) {
+    std::vector<std::string> _words;
 
-    std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<int> lenDist(minLength, maxLength);
-    std::uniform_int_distribution<int> charDist(0, 25);
+    _count = std::max(0, _count);
+    _min_length = std::max(1, _min_length);
+    _max_length = std::max(_min_length, _max_length);
 
-    words.reserve(static_cast<std::size_t>(count));
-    for (int i = 0; i < count; ++i) {
-        const int len = lenDist(rng);
-        std::string word;
-        word.reserve(static_cast<std::size_t>(len));
-        for (int j = 0; j < len; ++j) {
-            word.push_back(static_cast<char>('a' + charDist(rng)));
+    std::mt19937 _rng(std::random_device{}());
+    std::uniform_int_distribution<int> _len_dist(_min_length, _max_length);
+    std::uniform_int_distribution<int> _char_dist(0, 25);
+
+    _words.reserve(static_cast<std::size_t>(_count));
+
+    for (int _i = 0; _i < _count; ++_i) {
+        const int _len = _len_dist(_rng);
+        std::string _word;
+        _word.reserve(static_cast<std::size_t>(_len));
+
+        for (int _j = 0; _j < _len; ++_j) {
+            _word.push_back(static_cast<char>('a' + _char_dist(_rng)));
         }
-        words.push_back(std::move(word));
+        _words.push_back(std::move(_word));
     }
 
-    return words;
+    return _words;
 }
 
 TrieNode* Trie::cloneTrieNode(const TrieNode* source)

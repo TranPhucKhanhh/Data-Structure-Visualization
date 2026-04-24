@@ -64,10 +64,10 @@ namespace {
     const char* kSearchCode[] = {
         "1  FUNCTION search(word, root):",
         "2      node = root",
-        "2      FOR each char in word:",
-        "3          IF char NOT IN node.children THEN return false ",
-        "4          node = node.children[char]",
-        "5      return node.is_end_of_word"
+        "3      FOR each char in word:",
+        "4          IF char NOT IN node.children THEN return false ",
+        "5          node = node.children[char]",
+        "6      return node.is_end_of_word"
     };
 
     const char* kDeleteCode[] = {
