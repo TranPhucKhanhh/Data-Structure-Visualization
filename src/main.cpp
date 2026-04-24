@@ -206,13 +206,7 @@ namespace {
 	sf::VideoMode pickVideoMode(const GraphicsSettings& settings)
 	{
 		if (settings.windowMode == WindowMode::Fullscreen) {
-			const std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
-			for (const sf::VideoMode& mode : modes) {
-				if (mode.size.x == static_cast<unsigned int>(settings.resolutionWidth) &&
-					mode.size.y == static_cast<unsigned int>(settings.resolutionHeight)) {
-					return mode;
-				}
-			}
+            // Use desktop resolution for borderless fullscreen.
 			return sf::VideoMode::getDesktopMode();
 		}
 
@@ -230,11 +224,9 @@ namespace {
 			: 0U;
 
 		const sf::VideoMode mode = pickVideoMode(settings);
-		const sf::State state = (settings.windowMode == WindowMode::Fullscreen)
-			? sf::State::Fullscreen
-			: sf::State::Windowed;
+		const sf::State state = sf::State::Windowed;
 		const auto windowStyle = (settings.windowMode == WindowMode::Fullscreen)
-			? sf::Style::Default
+			? sf::Style::None
 			: (sf::Style::Titlebar | sf::Style::Close);
 
 		sf::RenderWindow window(
@@ -247,6 +239,9 @@ namespace {
 
 		window.setVerticalSyncEnabled(settings.vsyncEnabled);
 		window.setFramerateLimit(static_cast<unsigned int>(std::max(24, settings.fpsLimit)));
+		if (settings.windowMode == WindowMode::Fullscreen) {
+			window.setPosition({ 0, 0 });
+		}
 		return window;
 	}
 
