@@ -34,8 +34,16 @@ namespace {
 
 	void normalizeGraphicsSettings(GraphicsSettings& settings, int monitorWidth, int monitorHeight)
 	{
-		settings.resolutionWidth = std::clamp(settings.resolutionWidth, 800, std::max(800, monitorWidth));
-		settings.resolutionHeight = std::clamp(settings.resolutionHeight, 600, std::max(600, monitorHeight));
+		const int clampedMonitorWidth = std::max(800, monitorWidth);
+		const int clampedMonitorHeight = std::max(600, monitorHeight);
+		if (settings.windowMode == WindowMode::Fullscreen) {
+			settings.resolutionWidth = clampedMonitorWidth;
+			settings.resolutionHeight = clampedMonitorHeight;
+		}
+		else {
+			settings.resolutionWidth = std::clamp(settings.resolutionWidth, 800, clampedMonitorWidth);
+			settings.resolutionHeight = std::clamp(settings.resolutionHeight, 600, clampedMonitorHeight);
+		}
 		settings.antialiasingLevel = std::clamp(settings.antialiasingLevel, 0, 16);
 		settings.antialiasingEnabled = settings.antialiasingLevel > 0;
 		settings.fpsLimit = std::clamp(settings.fpsLimit, 24, 240);

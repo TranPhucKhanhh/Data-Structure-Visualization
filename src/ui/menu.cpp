@@ -320,6 +320,10 @@ void MenuUI::draw() {
 
 		const int monitorW = std::max(800, uiConfig.monitorWidth);
 		const int monitorH = std::max(600, uiConfig.monitorHeight);
+		if (draftSettings.windowMode == WindowMode::Fullscreen) {
+			draftSettings.resolutionWidth = monitorW;
+			draftSettings.resolutionHeight = monitorH;
+		}
 		if (draftSettings.resolutionWidth > monitorW || draftSettings.resolutionHeight > monitorH) {
 			draftSettings.resolutionWidth = monitorW;
 			draftSettings.resolutionHeight = monitorH;
@@ -338,7 +342,13 @@ void MenuUI::draw() {
 			resolutionPreviewLabel = kResolutionOptions[static_cast<std::size_t>(selectedResolution)].label;
 		}
 
-		if (ImGui::BeginCombo("Resolution", resolutionPreviewLabel)) {
+		if (draftSettings.windowMode == WindowMode::Fullscreen) {
+			ImGui::BeginDisabled();
+			ImGui::Text("Resolution: %d x %d", monitorW, monitorH);
+			ImGui::EndDisabled();
+			ImGui::TextColored(ImVec4(0.52f, 0.56f, 0.62f, 1.0f), "Fullscreen mode uses current monitor resolution.");
+		}
+		else if (ImGui::BeginCombo("Resolution", resolutionPreviewLabel)) {
 			for (int i = 0; i < static_cast<int>(kResolutionOptions.size()); ++i) {
 				const ResolutionOption& option = kResolutionOptions[static_cast<std::size_t>(i)];
 				if (option.width > monitorW || option.height > monitorH) {
@@ -416,6 +426,10 @@ void MenuUI::draw() {
 
 		ImGui::Spacing();
 		if (AudioButton("Apply", ImVec2(120.0f, 0.0f))) {
+			if (draftSettings.windowMode == WindowMode::Fullscreen) {
+				draftSettings.resolutionWidth = monitorW;
+				draftSettings.resolutionHeight = monitorH;
+			}
 			draftSettings.antialiasingLevel = std::clamp(draftSettings.antialiasingLevel, 0, 16);
 			draftSettings.antialiasingEnabled = draftSettings.antialiasingLevel > 0;
 			draftSettings.fpsLimit = std::max(24, draftSettings.fpsLimit);
