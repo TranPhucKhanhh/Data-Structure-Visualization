@@ -87,6 +87,7 @@ public:
     std::string initFromString(const std::string &input_content);
 
     std::vector<std::array<int, 3>> generateRandomGraph(int& vertexCount);
+    std::vector<std::array<int, 3>> generateRandomGraph(int vertexCount, int& outVertexCount);
 
     ///Dijkstra running process and queries
     //Step-by-step Instruction

@@ -25,6 +25,7 @@ public:
 private:
     std::array<char, 1024> txtPath_{};
 	std::array<char, 1024> edgeInput_{};
+	std::array<char, 32> randomNodeCount_{};
 	std::vector<std::array<int, 3>> graphEdges_;
 	std::vector<ShortestPathInstruction> currentSteps_;
 	std::vector<int> pathNodes_;
