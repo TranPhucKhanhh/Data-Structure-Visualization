@@ -630,7 +630,10 @@ void ShortestPathUI::draw() {
 					}
 				}
 
-                //Update the File Browser button for Shortest Path
+				ImGui::SetNextItemWidth(std::max(220.0f * controlScale, ImGui::GetContentRegionAvail().x));
+				ImGui::InputText("File path", txtPath_.data(), txtPath_.size());
+
+				// Update the file browser button for Shortest Path.
 				if (AudioButton("Browse File", ImVec2(120.0f * controlScale, 0.0f)))
                 {
                     std::string selected_path = cr::utils::SimpleFileDialog::dialog();
@@ -671,8 +674,6 @@ void ShortestPathUI::draw() {
                     }
                 }
 
-                ImGui::SameLine();
-                ImGui::Text("Path: %s", txtPath_.data());
 
 				ImGui::PushItemWidth(100.0f * controlScale);
                 ImGui::InputInt("Start node", &startNode_);
