@@ -12,7 +12,7 @@ This project was created for **CS163 - Data Structures and Algorithms** at **HCM
 
 - Trần Phúc Khánh - 25125020
 - Lê Hồng Đăng - 25125040
-- Phạm Gia Bảo - 25125080
+- Phạm Quốc Bảo - 25125080
 - Lương Nhật Minh - 25125088
 
 ## Overview
