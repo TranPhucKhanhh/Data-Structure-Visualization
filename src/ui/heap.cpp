@@ -398,8 +398,9 @@ void HeapUI::draw() {
 	auto switchHeapType = [&]() {
 		const std::vector<int> current = heap.getData();
 		heap.swapType();
-		heap.initFromList(current);
-		startTimeline({}, heap.getData(), operationMenuIndex_, heap.getType() == HeapType::MinHeap ? "Switched to Min Heap" : "Switched to Max Heap");
+		heap.clear();
+		std::vector<HeapInstruction> steps = heap.initFromListStep(current);
+		startTimeline(std::move(steps), current, 0, heap.getType() == HeapType::MinHeap ? "Switched to Min Heap" : "Switched to Max Heap");
 	};
 
 	const float drawerBottomY = vpPos.y + vpSize.y - 300.0f * layoutScale;
