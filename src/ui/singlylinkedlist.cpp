@@ -442,6 +442,16 @@ void SinglyLinkedListUI::draw() {
 		navButton("HEAP", UIState::Heap, uiConfig.state == UIState::Heap);
 		navButton("SHORTEST PATH", UIState::ShortestPath, uiConfig.state == UIState::ShortestPath);
 
+		ImGui::SameLine();
+		const float resetButtonWidth = 116.0f * layoutScale;
+		ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), vpSize.x - resetButtonWidth - 20.0f * layoutScale));
+		if (AudioButton("Reset View", ImVec2(resetButtonWidth, 26.0f * layoutScale))) {
+			scrollOffset_ = 0.0f;
+			canvasOffsetY_ = 0.0f;
+			zoomScale_ = 1.0f;
+			isCanvasDragging_ = false;
+		}
+
 		ImGui::PopStyleColor(4);
 	}
 	ImGui::End();
