@@ -40,6 +40,7 @@ struct UIConfig {
 	bool requestAppQuit = false;
 	bool requestGraphicsApply = false;
 	bool requestSettingsSave = false;
+	bool windowFocused = true;
 	GraphicsSettings graphicsSettings;
 	AudioSettings audioSettings;
 	int monitorWidth = 1920;

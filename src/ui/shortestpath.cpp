@@ -1059,7 +1059,7 @@ void ShortestPathUI::drawSfml(sf::RenderWindow& window) {
 	const bool mouseInsideCanvas =
 		mousePos.x >= 0 && mousePos.y >= 0 &&
 		mousePos.x < static_cast<int>(size.x) && mousePos.y < static_cast<int>(size.y);
-	const bool canInteractCanvas = mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
+	const bool canInteractCanvas = uiConfig.windowFocused && mouseInsideCanvas && !ImGui::GetIO().WantCaptureMouse;
 
 	if (canInteractCanvas) {
 		const float wheel = ImGui::GetIO().MouseWheel;

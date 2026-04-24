@@ -306,6 +306,8 @@ int main()
 
 	while (window.isOpen())
 	{
+		uiConfig.windowFocused = window.hasFocus();
+
 		if (uiConfig.requestGraphicsApply) {
 			normalizeGraphicsSettings(uiConfig.graphicsSettings, uiConfig.monitorWidth, uiConfig.monitorHeight);
 			if (!applyGraphicsSettings(window)) {
