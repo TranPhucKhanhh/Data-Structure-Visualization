@@ -37,7 +37,8 @@ std::string cr::utils::SimpleFileDialog::dialog()
 #elif defined(_WIN32)
     IFileOpenDialog* pFileOpen = nullptr;
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    if (FAILED(hr)) {
+    const bool shouldUninitialize = SUCCEEDED(hr);
+    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
         return "";
     }
 
@@ -52,7 +53,7 @@ std::string cr::utils::SimpleFileDialog::dialog()
     );
 
     if (SUCCEEDED(hr) && pFileOpen) {
-        pFileOpen->SetTitle(L"OPEN VIDEO FILE");
+        pFileOpen->SetTitle(L"Open File");
 
         hr = pFileOpen->Show(NULL);
         if (SUCCEEDED(hr)) {
@@ -80,7 +81,9 @@ std::string cr::utils::SimpleFileDialog::dialog()
         pFileOpen->Release();
     }
 
-    CoUninitialize();
+    if (shouldUninitialize) {
+        CoUninitialize();
+    }
     return result;
 
 #else
