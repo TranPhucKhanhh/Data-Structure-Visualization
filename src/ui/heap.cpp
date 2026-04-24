@@ -484,9 +484,10 @@ void HeapUI::draw() {
 				ImGui::PopItemWidth();
 				ImGui::SameLine();
 				if (AudioButton("Random", ImVec2(78.0f * controlScale, 0.0f))) {
-
-					std::vector<HeapInstruction> steps = heap.initRandomStep(randomCount_);
-					startTimeline(std::move(steps), heap.getData(), 0, "Initialized random heap");
+					const std::vector<int> values = heap.generateRandomValues(randomCount_);
+					heap.clear();
+					std::vector<HeapInstruction> steps = heap.initFromListStep(values);
+					startTimeline(std::move(steps), values, 0, "Initialized random heap");
 				}
 
 				ImGui::Separator();
@@ -527,9 +528,10 @@ void HeapUI::draw() {
 				ImGui::SameLine();
 				if (AudioButton("Load txt", ImVec2(loadButtonW, 0.0f))) {
 					try {
+						const std::vector<int> values = heap.loadValuesFromFile(txtPath_.data());
 						heap.clear();
-						std::vector<HeapInstruction> steps = heap.initFromFileStep(txtPath_.data());
-						startTimeline(std::move(steps), heap.getData(), 0, "Initialized from text file");
+						std::vector<HeapInstruction> steps = heap.initFromListStep(values);
+						startTimeline(std::move(steps), values, 0, "Initialized from text file");
 					}
 					catch (...) {
 						operationResult_ = "Load failed: cannot open file";

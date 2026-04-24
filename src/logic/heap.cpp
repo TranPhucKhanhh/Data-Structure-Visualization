@@ -103,32 +103,11 @@ void Heap::initFromList(const std::vector<int>& list)
 
 void Heap::initFromFile(const std::string& file_path)
 {
-	std::ifstream file(file_path);
-	if (!file) {
-		throw std::runtime_error("Cannot open file");
-	}
-
-	std::vector<int> values;
-	int x;
-
-	while (file >> x) {
-		values.push_back(x);
-	}
-
-	initFromList(values);
+	initFromList(loadValuesFromFile(file_path));
 }
 
 void Heap::initRandom(const int &num) {
-    std::vector<int> vc;
-    int max_value = 100;
-    int min_value = 0;
-
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    for (int i = 0; i < num; i++) {
-        vc.push_back(min_value + (std::rand() % (max_value - min_value + 1)));
-    }
-
-    initFromList(vc);
+    initFromList(generateRandomValues(num));
 }
 
 void Heap::insertValue(const int& val) {
@@ -193,28 +172,12 @@ std::vector<HeapInstruction> Heap::initFromListStep(const std::vector<int>& list
 
 std::vector<HeapInstruction> Heap::initFromFileStep(const std::string& file_path)
 {
-	std::ifstream file(file_path);
-	if (!file) {
-		throw std::runtime_error("Cannot open file");
-	}
-	std::vector<int> values;
-	int x;
-	while (file >> x) {
-		values.push_back(x);
-	}
-	return initFromListStep(values);
+	return initFromListStep(loadValuesFromFile(file_path));
 }
 
 std::vector<HeapInstruction> Heap::initRandomStep(const int &num)
 {
-    std::vector<int> values;
-
-    std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<int> valueDist(0, 99);
-
-    for (int i = 0; i < num; ++i) values.push_back(valueDist(rng));
-
-    return initFromListStep(values);
+    return initFromListStep(generateRandomValues(num));
 }
 
 std::vector<HeapInstruction> Heap::insertValueStep(const int& val)
@@ -363,5 +326,32 @@ std::vector<int> Heap::parseIntegers(const std::string& raw) const {
 		}
 	}
 	return _values;
+}
+
+std::vector<int> Heap::loadValuesFromFile(const std::string& file_path) const {
+	std::ifstream file(file_path);
+	if (!file) {
+		throw std::runtime_error("Cannot open file");
+	}
+
+	std::vector<int> values;
+	int x;
+	while (file >> x) {
+		values.push_back(x);
+	}
+	return values;
+}
+
+std::vector<int> Heap::generateRandomValues(const int& num) const {
+	std::vector<int> values;
+
+	std::mt19937 rng(std::random_device{}());
+	std::uniform_int_distribution<int> valueDist(0, 99);
+
+	for (int i = 0; i < num; ++i) {
+		values.push_back(valueDist(rng));
+	}
+
+	return values;
 }
 

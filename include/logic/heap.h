@@ -77,6 +77,8 @@ public:
 	//Logic functions moved from UI file
 	void applyInstructions(std::vector<int> &state, const HeapInstruction &instruction, int &cursor_idx);
     std::vector<int> parseIntegers(const std::string& raw) const;
+	std::vector<int> loadValuesFromFile(const std::string& file_path) const;
+	std::vector<int> generateRandomValues(const int& num) const;
 };
 
 inline Heap heap;
