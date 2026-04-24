@@ -199,6 +199,58 @@ std::vector<std::array<int, 3>> ShortestPath::generateRandomGraph(int& vertexCou
 	return edges;
 }
 
+std::vector<std::array<int, 3>> ShortestPath::generateRandomGraph(int vertexCount, int& outVertexCount)
+{
+	std::random_device rd;
+	std::mt19937 rng(rd());
+	std::uniform_int_distribution<int> weightDist(1, 20);
+
+	outVertexCount = vertexCount;
+	const int maxEdges = vertexCount * (vertexCount - 1) / 2;
+	const int minEdges = vertexCount - 1;
+	const int desiredUpperBound = std::min(maxEdges, vertexCount + vertexCount / 2 + 2);
+	std::uniform_int_distribution<int> edgeDist(minEdges, std::max(minEdges, desiredUpperBound));
+	const int targetEdges = edgeDist(rng);
+
+	std::vector<std::array<int, 3>> edges;
+	edges.reserve(static_cast<std::size_t>(targetEdges));
+	std::set<std::pair<int, int>> used;
+
+	std::vector<int> order(static_cast<std::size_t>(vertexCount));
+	for (int i = 0; i < vertexCount; ++i) {
+		order[static_cast<std::size_t>(i)] = i;
+	}
+	std::shuffle(order.begin(), order.end(), rng);
+
+	for (int i = 1; i < vertexCount; ++i) {
+		const int u = order[static_cast<std::size_t>(i)];
+		std::uniform_int_distribution<int> parentDist(0, i - 1);
+		const int v = order[static_cast<std::size_t>(parentDist(rng))];
+		const int a = std::min(u, v);
+		const int b = std::max(u, v);
+		used.insert({ a, b });
+		edges.push_back({ u, v, weightDist(rng) });
+	}
+
+	std::uniform_int_distribution<int> nodeDist(0, vertexCount - 1);
+	while (static_cast<int>(edges.size()) < targetEdges) {
+		const int u = nodeDist(rng);
+		const int v = nodeDist(rng);
+		if (u == v) {
+			continue;
+		}
+		const int a = std::min(u, v);
+		const int b = std::max(u, v);
+		if (used.find({ a, b }) != used.end()) {
+			continue;
+		}
+		used.insert({ a, b });
+		edges.push_back({ u, v, weightDist(rng) });
+	}
+
+	return edges;
+}
+
 std::vector<ShortestPathInstruction> ShortestPath::getDijkstraStep(int start, int finish)
 {
     std::vector<ShortestPathInstruction> steps;

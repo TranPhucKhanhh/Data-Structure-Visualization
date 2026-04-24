@@ -276,6 +276,7 @@ ShortestPathUI::ShortestPathUI() {
 	endNode_ = std::max(0, vertexCount_ - 1);
 	statusMessage_ = "Sample graph is ready.";
 	resultMessage_ = "Press Run Dijkstra to preview the shortest path.";
+	std::snprintf(randomNodeCount_.data(), randomNodeCount_.size(), "10");
 }
 
 void ShortestPathUI::startTimeline(std::vector<ShortestPathInstruction>&& steps, int sourceMenuIndex, const std::string& fallbackMessage) {
@@ -592,24 +593,42 @@ void ShortestPathUI::draw() {
 				ImGui::TextUnformatted("Graph Input");
 				ImGui::TextWrapped("Enter each edge as three numbers: u v w. Example: 0 1 4");
 				ImGui::InputTextMultiline("##SPEdgeInput", edgeInput_.data(), edgeInput_.size(), ImVec2(-1.0f, 108.0f));
-				if (AudioButton("Random (5-10 nodes)", ImVec2(190.0f * controlScale, 0.0f))) {
-					graphEdges_ = shortestPath.generateRandomGraph(vertexCount_);
-					edgeCount_ = static_cast<int>(graphEdges_.size());
+				ImGui::TextUnformatted("Custom node count:");
+				ImGui::InputText("##RandomNodeCount", randomNodeCount_.data(), randomNodeCount_.size());
+				ImGui::SameLine();
+				if (AudioButton("Generate", ImVec2(100.0f * controlScale, 0.0f))) {
+					try {
+						int nodeCount = std::stoi(randomNodeCount_.data());
+						if (nodeCount < 2) {
+							statusMessage_ = "Node count must be at least 2.";
+							resultMessage_ = statusMessage_;
+						} else if (nodeCount > 100) {
+							statusMessage_ = "Node count must not exceed 100.";
+							resultMessage_ = statusMessage_;
+						} else {
+							int outVertexCount = 0;
+							graphEdges_ = shortestPath.generateRandomGraph(nodeCount, outVertexCount);
+							vertexCount_ = outVertexCount;
+							edgeCount_ = static_cast<int>(graphEdges_.size());
 
-					const std::string generatedText = edgesToInputText(graphEdges_, vertexCount_);
-					std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", generatedText.c_str());
-					statusMessage_ = shortestPath.initFromString(edgeInput_.data());
-					graphLoaded_ = edgeCount_ > 0;
-					startNode_ = 0;
-					endNode_ = std::max(0, vertexCount_ - 1);
-					pathNodes_.clear();
-					pathFound_ = false;
-					statusMessage_ = "Random positive-weight graph generated.";
-					resultMessage_ = "Go to Run and press Run Dijkstra to test this graph.";
-					startInitializeAnimation();
-					resetTimeline();
+							const std::string generatedText = edgesToInputText(graphEdges_, vertexCount_);
+							std::snprintf(edgeInput_.data(), edgeInput_.size(), "%s", generatedText.c_str());
+							statusMessage_ = shortestPath.initFromString(edgeInput_.data());
+							graphLoaded_ = edgeCount_ > 0;
+							startNode_ = 0;
+							endNode_ = std::max(0, vertexCount_ - 1);
+							pathNodes_.clear();
+							pathFound_ = false;
+							statusMessage_ = "Random graph with " + std::to_string(nodeCount) + " nodes generated.";
+							resultMessage_ = "Go to Run and press Run Dijkstra to test this graph.";
+							startInitializeAnimation();
+							resetTimeline();
+						}
+					} catch (const std::exception& e) {
+						statusMessage_ = "Invalid node count. Please enter a number.";
+						resultMessage_ = statusMessage_;
+					}
 				}
-
 
                 //Update the File Browser button for Shortest Path
 				if (AudioButton("Browse File", ImVec2(120.0f * controlScale, 0.0f)))
