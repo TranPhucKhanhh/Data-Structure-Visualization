@@ -55,6 +55,7 @@ It provides a desktop UI where users can switch between modules, input data manu
 - A C++17-compatible compiler
 - [CMake 3.28+](https://cmake.org/download/)
 - Git
+- An internet connection during the first build, as project dependencies are fetched automatically through CMake
 
 ### Build
 
@@ -64,6 +65,8 @@ From the project root, run:
 cmake -B build
 cmake --build build --config Release
 ```
+
+*Cautious: In some devices, it is recommended to place the project in a directory with a non-space path to avoid potential issues with CMake and dependencies since we already experienced CMake build errors due to space in the path.*
 
 ### Run
 
